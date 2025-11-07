@@ -40,7 +40,7 @@ export default function Todos() {
     mutationFn: async (title: string) => {
       return await apiRequest("POST", "/api/todos", {
         title,
-        completed: false,
+        isCompleted: false,
       });
     },
     onSuccess: () => {
@@ -72,8 +72,8 @@ export default function Todos() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, completed }: { id: string; completed: boolean }) => {
-      return await apiRequest("PATCH", `/api/todos/${id}`, { completed });
+    mutationFn: async ({ id, isCompleted }: { id: string; isCompleted: boolean }) => {
+      return await apiRequest("PATCH", `/api/todos/${id}`, { isCompleted });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/todos"] });
@@ -162,8 +162,8 @@ export default function Todos() {
     return null;
   }
 
-  const completedTodos = todos?.filter((t) => t.completed) || [];
-  const pendingTodos = todos?.filter((t) => !t.completed) || [];
+  const completedTodos = todos?.filter((t) => t.isCompleted) || [];
+  const pendingTodos = todos?.filter((t) => !t.isCompleted) || [];
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
@@ -215,9 +215,9 @@ export default function Todos() {
                   >
                     <div className="flex items-center gap-3">
                       <Checkbox
-                        checked={todo.completed}
+                        checked={todo.isCompleted}
                         onCheckedChange={(checked) =>
-                          updateMutation.mutate({ id: todo.id, completed: checked as boolean })
+                          updateMutation.mutate({ id: todo.id, isCompleted: checked as boolean })
                         }
                         data-testid={`checkbox-${todo.id}`}
                       />
