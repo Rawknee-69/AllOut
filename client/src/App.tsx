@@ -13,6 +13,8 @@ import Materials from "@/pages/materials";
 import Chat from "@/pages/chat";
 import Flashcards from "@/pages/flashcards";
 import Quizzes from "@/pages/quizzes";
+import Summaries from "@/pages/summaries";
+import Todos from "@/pages/todos";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -30,6 +32,8 @@ function Router() {
           <Route path="/chat" component={Chat} />
           <Route path="/flashcards" component={Flashcards} />
           <Route path="/quizzes" component={Quizzes} />
+          <Route path="/summaries" component={Summaries} />
+          <Route path="/todos" component={Todos} />
           {/* Add more authenticated routes here */}
         </>
       )}
