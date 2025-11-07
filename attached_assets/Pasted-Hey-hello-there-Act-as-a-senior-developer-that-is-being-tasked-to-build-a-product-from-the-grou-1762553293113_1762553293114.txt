@@ -1,0 +1,42 @@
+Hey , hello there . Act as a senior developer that is being tasked to build a product from the  ground up first i would tell you the specs and the frameworks on which this project would be built and then we would continue with the idea . For more context it is a hackathon contest and we have to build it okay . 
+
+The tech specs and frameworks are 
+
+1. one src folder architecture & please use bun insted of npm through out the project 
+
+2. express js , node js , react , vite , api keys of open router and gemini , postgres db ( or replit db ) ,sentry for analytics ( backend ) , ( any other api if required )
+
+3. react , tailwindcss , shadcn , react icons etc . 
+
+4 . deployment would be on replit or vercel !
+
+Okay now time for the idea we thought of and its is a study platform where the user can login and set their degree , class or std they are in and upload notes and have access to all these features which iam gonna mention below and that too in interactive manner 
+
+1. students can uplaod notes and the ai would answer anything from it 
+2. it also has the todo list that students could check out after completion of tasks 
+
+3 . has a leader board all across the globe system , the person who studys the more gets on top of list and so on the evalutaion would be based on the time studied , time taken rest and so on and so forth !
+
+4. Audio summary explationation of the topic like turns the full pdf uplaoded in the  summarized notes which is that explains alsmost everything more easliy clearly and in layman terms , the user could chose to hear in layman terms or researchers view and also it points out the keywords  in that and also gives a pdf with ethe keywords that is gonna be used and are useful 
+
+5 . same as audio but this time ity would use ai to generate the video insted explaining everythinng and the qulaity must be good and the images or animation used in that must be teh best 
+
+6. Mind maps : it would make the mind map of the whole pdf that would help the students .
+
+7 . it would also make reports : it would make the sub topic and  describe it in detail or user can also give their own prompt on how they want the report , thesis etc ...
+
+8. It would also make flash cards for the whole pdf and topic and it must the useful flashcards and also make sure it is good and meaningful 
+
+9 . It also makes the quiz related to the full pdf uplaoded  and also has an interactive and there would be another leader board for most quiz solved  and most marks scored and if there is a tab switch it would be cancelled. 
+
+10 . There would also be a simple chatbot that would refer to uplaoded material for the answers and if not there then it would answer on its own 
+
+11. Concentration mode : if user switches the tab when this mode is active , it would play a beep sound every 5 minutes wasted and it would calculate the time wasted and also it would affect the leader boadrd rank 
+
+12. It also gives recommendation of the videos from yt . as the thing is the it would analyze the topic and give the top rated vides realted to it .
+
+13. It also has a Pomodro feature and when it is turned on it would work as well ! 
+
+14 . It would also streak Mode , everyday the user study atleast for half  an hour the steak is made provided the tab must not be switched or any illgeal activites to increase the streak countdown timer .
+
+For now this is all i have to build so please respect each thing and please try making it as good and beautiful as possible and also make it resposnive and it would also have a landing page so please  use / api route  as the landing page and also make sure that it works . And alll prompts to ai would be in folder named prompts and it would be in md format  okay and make sure that you ahve to make it preformant . 
