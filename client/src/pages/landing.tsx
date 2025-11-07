@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { BookOpen, Brain, Target, Trophy, Timer, Zap } from "lucide-react";
 
 export default function Landing() {
@@ -11,9 +12,12 @@ export default function Landing() {
             <BookOpen className="h-8 w-8 text-primary" data-testid="logo-icon" />
             <span className="text-2xl font-heading font-bold" data-testid="logo-text">StudyMaster</span>
           </div>
-          <Button asChild data-testid="button-login">
-            <a href="/api/login">Sign In</a>
-          </Button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button asChild data-testid="button-login">
+              <a href="/api/login">Sign In</a>
+            </Button>
+          </div>
         </div>
       </header>
 

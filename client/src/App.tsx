@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
@@ -64,6 +66,7 @@ function AppContent() {
             <div className="flex flex-col flex-1 overflow-hidden">
               <header className="flex items-center justify-between p-4 border-b">
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
+                <ThemeToggle />
               </header>
               <main className="flex-1 overflow-y-auto">
                 <Router />
@@ -80,9 +83,11 @@ function AppContent() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AppContent />
-      </TooltipProvider>
+      <ThemeProvider defaultTheme="light">
+        <TooltipProvider>
+          <AppContent />
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
