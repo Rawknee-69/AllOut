@@ -208,7 +208,7 @@ export default function Quizzes() {
   };
 
   const handleSubmit = () => {
-    if (!activeQuiz) return;
+    if (!activeQuiz || !activeQuiz.questions || !Array.isArray(activeQuiz.questions)) return;
 
     if (isQuizCancelled) {
       submitAttemptMutation.mutate({
@@ -229,7 +229,7 @@ export default function Quizzes() {
     }
 
     let correctCount = 0;
-    activeQuiz.questions.forEach((q: any, index: number) => {
+    activeQuiz.questions.forEach((q, index: number) => {
       if (answers[index] === q.correctAnswer) {
         correctCount++;
       }
