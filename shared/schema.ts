@@ -94,6 +94,7 @@ export const summaries = pgTable("summaries", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   materialId: varchar("material_id").notNull().references(() => studyMaterials.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
+  audioUrl: text("audio_url"), // URL to Deepgram-generated audio in object storage
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
