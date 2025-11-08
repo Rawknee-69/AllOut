@@ -229,7 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         model: "gemini-2.0-flash-exp",
         contents: prompt,
       });
-      const text = result.text;
+      const text = result.text || "";
       
       // Extract JSON from response
       const jsonMatch = text.match(/\[[\s\S]*\]/);
@@ -334,7 +334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         model: "gemini-2.0-flash-exp",
         contents: prompt,
       });
-      const text = result.text;
+      const text = result.text || "";
       
       // Extract JSON from response
       const jsonMatch = text.match(/\[[\s\S]*\]/);
@@ -428,12 +428,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if summary already exists
       const existingSummary = await storage.getSummaryByMaterial(materialId);
-      if (existingSummary) {
+      if (existingSummary && existingSummary.audioUrl) {
+        // Summary with audio already exists, return it
         return res.json(existingSummary);
       }
+      
+      // If summary exists but no audio, we'll regenerate both for consistency
+      let content = "";
+      if (existingSummary) {
+        content = existingSummary.content;
+      } else {
 
-      // Use Gemini to generate an educational summary with examples
-      const prompt = `You are an expert tutor helping a student understand the study material titled "${material.title}".
+        // Use Gemini to generate an educational summary with examples
+        const prompt = `You are an expert tutor helping a student understand the study material titled "${material.title}".
 
 Generate a comprehensive educational summary that:
 1. Explains the main concepts in simple, everyday language
@@ -447,11 +454,12 @@ Format the summary to be clear and well-organized with headings and bullet point
 
 Your goal is to ensure that even the most difficult concepts become easy to understand through your explanations and examples.`;
 
-      const result = await genAI.models.generateContent({
-        model: "gemini-2.0-flash-exp",
-        contents: prompt,
-      });
-      const content = result.text || "";
+        const result = await genAI.models.generateContent({
+          model: "gemini-2.0-flash-exp",
+          contents: prompt,
+        });
+        content = result.text || "";
+      }
 
       // Generate audio from the summary using Deepgram
       let audioUrl: string | null = null;
@@ -462,9 +470,14 @@ Your goal is to ensure that even the most difficult concepts become easy to unde
           model: "aura-asteria-en" // Natural, clear voice for educational content
         });
 
+        console.log("Audio buffer generated, size:", audioBuffer.length, "bytes");
+
         // Upload audio to object storage
         const audioFileName = `summaries/audio_${materialId}_${Date.now()}.wav`;
+        console.log("Uploading audio to:", audioFileName);
+        
         await objectStorage.uploadFile(audioFileName, audioBuffer, "audio/wav");
+        console.log("Audio uploaded successfully");
         
         // Set ACL policy so user can access the audio
         const audioFile = await objectStorage.getObjectEntityFile(`/objects/${audioFileName}`);
@@ -477,16 +490,24 @@ Your goal is to ensure that even the most difficult concepts become easy to unde
         console.log("Audio summary generated and uploaded:", audioUrl);
       } catch (audioError) {
         console.error("Error generating audio summary:", audioError);
+        console.error("Audio error stack:", audioError instanceof Error ? audioError.stack : "");
         // Continue without audio if generation fails
       }
 
-      // Save summary to database with audio URL
-      const summary = await storage.createSummary({
-        userId,
-        materialId,
-        content,
-        audioUrl,
-      });
+      // Save or update summary in database with audio URL
+      let summary;
+      if (existingSummary) {
+        // Update existing summary with audio URL
+        summary = await storage.updateSummary(existingSummary.id, { audioUrl });
+      } else {
+        // Create new summary
+        summary = await storage.createSummary({
+          userId,
+          materialId,
+          content,
+          audioUrl,
+        });
+      }
 
       res.json(summary);
     } catch (error: any) {
@@ -531,7 +552,7 @@ Your goal is to ensure that even the most difficult concepts become easy to unde
         model: "gemini-2.0-flash-exp",
         contents: prompt,
       });
-      const text = result.text;
+      const text = result.text || "";
       
       // Extract JSON from response
       const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -608,7 +629,7 @@ Your goal is to ensure that even the most difficult concepts become easy to unde
         model: "gemini-2.0-flash-exp",
         contents: prompt,
       });
-      const aiResponse = result.text;
+      const aiResponse = result.text || "";
 
       // Save AI response
       const assistantMessage = await storage.createChatMessage({

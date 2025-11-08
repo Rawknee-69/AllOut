@@ -99,6 +99,7 @@ export interface IStorage {
   getSummariesByUser(userId: string): Promise<Summary[]>;
   getSummaryByMaterial(materialId: string): Promise<Summary | undefined>;
   createSummary(summary: InsertSummary): Promise<Summary>;
+  updateSummary(id: string, updates: Partial<InsertSummary>): Promise<Summary | undefined>;
   deleteSummary(id: string): Promise<void>;
 
   // Study Session operations
@@ -363,6 +364,11 @@ export class DbStorage implements IStorage {
 
   async createSummary(summary: InsertSummary): Promise<Summary> {
     const result = await db.insert(summaries).values(summary).returning();
+    return result[0];
+  }
+
+  async updateSummary(id: string, updates: Partial<InsertSummary>): Promise<Summary | undefined> {
+    const result = await db.update(summaries).set(updates).where(eq(summaries.id, id)).returning();
     return result[0];
   }
 
