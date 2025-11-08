@@ -58,10 +58,8 @@ export default function MaterialDetail() {
 
   const generateAudioMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest(`/api/summaries/generate`, {
-        method: "POST",
-        body: JSON.stringify({ materialId: id }),
-        headers: { "Content-Type": "application/json" },
+      return await apiRequest("POST", "/api/summaries/generate", {
+        materialId: id,
       });
     },
     onSuccess: () => {
