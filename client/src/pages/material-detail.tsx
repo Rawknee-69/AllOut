@@ -1,11 +1,12 @@
 import { useParams, Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Download, FileText } from "lucide-react";
+import { ArrowLeft, Download, FileText, Volume2, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface StudyMaterial {
   id: string;
@@ -15,6 +16,15 @@ interface StudyMaterial {
   fileUrl: string;
   fileSize: number;
   uploadedAt: string;
+}
+
+interface Summary {
+  id: string;
+  userId: string;
+  materialId: string;
+  content: string;
+  audioUrl: string | null;
+  createdAt: string;
 }
 
 export default function MaterialDetail() {
@@ -39,6 +49,35 @@ export default function MaterialDetail() {
   const { data: material, isLoading } = useQuery<StudyMaterial>({
     queryKey: ["/api/study-materials", id],
     enabled: isAuthenticated && !!id,
+  });
+
+  const { data: summary, isLoading: summaryLoading } = useQuery<Summary>({
+    queryKey: ["/api/summaries", id],
+    enabled: isAuthenticated && !!id,
+  });
+
+  const generateAudioMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest(`/api/summaries/generate`, {
+        method: "POST",
+        body: JSON.stringify({ materialId: id }),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/summaries", id] });
+      toast({
+        title: "Success",
+        description: "Audio summary generated successfully! You can now listen to it below.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate audio summary",
+        variant: "destructive",
+      });
+    },
   });
 
   const formatFileSize = (bytes: number) => {
@@ -120,6 +159,28 @@ export default function MaterialDetail() {
         </div>
       </Card>
 
+      {summary?.audioUrl && (
+        <Card className="p-6 mb-6" data-testid="card-audio-summary">
+          <div className="flex items-center gap-3 mb-4">
+            <Volume2 className="h-6 w-6 text-primary" />
+            <h2 className="font-heading font-semibold text-xl">Audio Summary</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Listen to an AI-generated audio explanation of this study material
+          </p>
+          <div className="bg-muted/50 p-4 rounded-lg" data-testid="audio-player-container">
+            <audio
+              controls
+              className="w-full"
+              data-testid="audio-player"
+              src={summary.audioUrl}
+            >
+              Your browser does not support the audio element.
+            </audio>
+          </div>
+        </Card>
+      )}
+
       <Card className="p-6" data-testid="card-pdf-viewer">
         <h2 className="font-heading font-semibold text-xl mb-4">PDF Preview</h2>
         <div className="w-full" style={{ height: "600px" }}>
@@ -139,6 +200,25 @@ export default function MaterialDetail() {
             Generate AI-powered study aids from this material
           </p>
           <div className="space-y-2">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start" 
+              onClick={() => generateAudioMutation.mutate()}
+              disabled={generateAudioMutation.isPending || summaryLoading}
+              data-testid="button-generate-audio"
+            >
+              {generateAudioMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating Audio...
+                </>
+              ) : (
+                <>
+                  <Volume2 className="h-4 w-4 mr-2" />
+                  Generate Audio Summarization
+                </>
+              )}
+            </Button>
             <Button variant="outline" className="w-full justify-start" asChild data-testid="button-generate-flashcards">
               <Link href={`/flashcards?materialId=${material.id}`}>
                 Generate Flashcards
