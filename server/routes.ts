@@ -101,7 +101,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const objectStorageService = new ObjectStorageService();
       const privateDir = objectStorageService.getPrivateObjectDir();
       
-      const fileName = `pdfs/${userId}/${Date.now()}_${file.originalname}`;
+      const sanitizedFilename = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const fileName = `pdfs/${userId}/${Date.now()}_${sanitizedFilename}`;
       const fullPath = `${privateDir}/${fileName}`;
       
       const pathParts = fullPath.split("/").filter(p => p);
@@ -117,6 +118,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           contentType: file.mimetype,
         },
       });
+      
+      const [exists] = await bucketFile.exists();
+      if (!exists) {
+        throw new Error("File failed to upload to object storage");
+      }
       
       await setObjectAclPolicy(bucketFile, {
         owner: userId,
