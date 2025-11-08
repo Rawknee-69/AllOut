@@ -23,6 +23,7 @@ import Todos from "@/pages/todos";
 import Pomodoro from "@/pages/pomodoro";
 import Concentration from "@/pages/concentration";
 import Leaderboard from "@/pages/leaderboard";
+import Collab from "@/pages/collab";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -49,6 +50,7 @@ function Router() {
           <Route path="/pomodoro" component={Pomodoro} />
           <Route path="/concentration" component={Concentration} />
           <Route path="/leaderboard" component={Leaderboard} />
+          <Route path="/collab" component={Collab} />
           {/* Add more authenticated routes here */}
         </>
       )}

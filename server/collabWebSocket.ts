@@ -1,12 +1,14 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { Server } from "http";
+import type { IncomingMessage } from "http";
 import { storage } from "./storage";
+import { parse as parseCookie } from "cookie";
+import { getSessionStore } from "./replitAuth";
 
 // WebSocket message types
 export interface WSMessage {
   type: string;
   sessionId: string;
-  userId: string;
   data?: any;
 }
 
@@ -16,55 +18,117 @@ const sessionClients = new Map<string, Set<WebSocket>>();
 // Client to session map for cleanup
 const clientSessions = new Map<WebSocket, string>();
 
+// WebSocket to authenticated userId map
+const authenticatedClients = new Map<WebSocket, string>();
+
 export function setupCollabWebSocket(server: Server) {
   const wss = new WebSocketServer({ 
     server,
-    path: "/collab-ws"
+    path: "/collab-ws",
+    verifyClient: async (info, callback) => {
+      try {
+        // Extract session cookie
+        const cookies = parseCookie(info.req.headers.cookie || "");
+        const sessionId = cookies["connect.sid"]?.split("s:")[1]?.split(".")[0];
+        
+        if (!sessionId) {
+          callback(false, 401, "Unauthorized");
+          return;
+        }
+
+        // Verify session
+        const sessionStore = getSessionStore();
+        sessionStore.get(sessionId, (err: any, session: any) => {
+          if (err || !session || !session.passport?.user?.claims?.sub) {
+            callback(false, 401, "Unauthorized");
+            return;
+          }
+          
+          // Session is valid
+          callback(true);
+        });
+      } catch (error) {
+        console.error("WebSocket auth error:", error);
+        callback(false, 500, "Internal Server Error");
+      }
+    }
   });
 
-  wss.on("connection", (ws: WebSocket) => {
+  wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
     console.log("New WebSocket connection established");
+
+    // Authenticate user from session
+    const cookies = parseCookie(req.headers.cookie || "");
+    const sessionId = cookies["connect.sid"]?.split("s:")[1]?.split(".")[0];
+    
+    let authenticatedUserId: string | null = null;
+    
+    if (sessionId) {
+      const sessionStore = getSessionStore();
+      await new Promise((resolve) => {
+        sessionStore.get(sessionId, (err: any, session: any) => {
+          if (!err && session?.passport?.user?.claims?.sub) {
+            authenticatedUserId = session.passport.user.claims.sub;
+          }
+          resolve(null);
+        });
+      });
+    }
+
+    if (!authenticatedUserId) {
+      ws.close(1008, "Unauthorized");
+      return;
+    }
+
+    // Store authenticated user
+    authenticatedClients.set(ws, authenticatedUserId);
 
     ws.on("message", async (message: string) => {
       try {
         const msg: WSMessage = JSON.parse(message.toString());
+        const userId = authenticatedClients.get(ws);
+        
+        if (!userId) {
+          ws.close(1008, "Unauthorized");
+          return;
+        }
         
         switch (msg.type) {
           case "join":
-            await handleJoin(ws, msg);
+            await handleJoin(ws, msg, userId);
             break;
           case "leave":
-            await handleLeave(ws, msg);
+            await handleLeave(ws, msg, userId);
             break;
           case "tab_switch":
-            await handleTabSwitch(ws, msg);
+            await handleTabSwitch(ws, msg, userId);
             break;
           case "pause":
-            await handlePause(ws, msg);
+            await handlePause(ws, msg, userId);
             break;
           case "unpause":
-            await handleUnpause(ws, msg);
+            await handleUnpause(ws, msg, userId);
             break;
           case "break_start":
-            await handleBreakStart(ws, msg);
+            await handleBreakStart(ws, msg, userId);
             break;
           case "break_end":
-            await handleBreakEnd(ws, msg);
+            await handleBreakEnd(ws, msg, userId);
             break;
           case "whiteboard_update":
-            await handleWhiteboardUpdate(ws, msg);
+            await handleWhiteboardUpdate(ws, msg, userId);
             break;
           case "mute_participant":
-            await handleMuteParticipant(ws, msg);
+            await handleMuteParticipant(ws, msg, userId);
             break;
           case "kick_participant":
-            await handleKickParticipant(ws, msg);
+            await handleKickParticipant(ws, msg, userId);
             break;
           case "mute_all":
-            await handleMuteAll(ws, msg);
+            await handleMuteAll(ws, msg, userId);
             break;
           case "concentration_toggle":
-            await handleConcentrationToggle(ws, msg);
+            await handleConcentrationToggle(ws, msg, userId);
             break;
           default:
             console.log("Unknown message type:", msg.type);
@@ -74,9 +138,18 @@ export function setupCollabWebSocket(server: Server) {
       }
     });
 
-    ws.on("close", () => {
+    ws.on("close", async () => {
+      const userId = authenticatedClients.get(ws);
       const sessionId = clientSessions.get(ws);
-      if (sessionId) {
+      
+      if (sessionId && userId) {
+        // Mark participant as left
+        const participant = await storage.getCollabParticipantByUserAndSession(userId, sessionId);
+        if (participant) {
+          await storage.removeCollabParticipant(participant.id);
+        }
+        
+        // Clean up client maps
         const clients = sessionClients.get(sessionId);
         if (clients) {
           clients.delete(ws);
@@ -85,6 +158,14 @@ export function setupCollabWebSocket(server: Server) {
           }
         }
         clientSessions.delete(ws);
+        authenticatedClients.delete(ws);
+        
+        // Notify others
+        broadcast(sessionId, {
+          type: "participant_left",
+          sessionId,
+          data: { userId },
+        });
       }
       console.log("WebSocket connection closed");
     });
@@ -118,8 +199,22 @@ function sendToClient(ws: WebSocket, message: WSMessage) {
   }
 }
 
-async function handleJoin(ws: WebSocket, msg: WSMessage) {
-  const { sessionId, userId } = msg;
+async function handleJoin(ws: WebSocket, msg: WSMessage, userId: string) {
+  const { sessionId } = msg;
+  
+  // Verify session exists and is active
+  const session = await storage.getCollabSession(sessionId);
+  if (!session || !session.isActive) {
+    ws.close(1008, "Session not found or inactive");
+    return;
+  }
+  
+  // Verify user is a participant in this session
+  const participant = await storage.getCollabParticipantByUserAndSession(userId, sessionId);
+  if (!participant) {
+    ws.close(1008, "Not authorized to join this session");
+    return;
+  }
   
   // Add client to session
   if (!sessionClients.has(sessionId)) {
@@ -128,8 +223,7 @@ async function handleJoin(ws: WebSocket, msg: WSMessage) {
   sessionClients.get(sessionId)!.add(ws);
   clientSessions.set(ws, sessionId);
 
-  // Get participant info
-  const participant = await storage.getCollabParticipantByUserAndSession(userId, sessionId);
+  // Get user info
   const user = await storage.getUser(userId);
   
   // Log join activity
@@ -147,23 +241,21 @@ async function handleJoin(ws: WebSocket, msg: WSMessage) {
   broadcast(sessionId, {
     type: "participant_joined",
     sessionId,
-    userId,
-    data: { participant, allParticipants: participants },
+    data: { participant, allParticipants: participants, userId },
   }, ws);
 
   // Send current state to new participant
   sendToClient(ws, {
     type: "session_state",
     sessionId,
-    userId,
     data: { participants },
   });
 }
 
-async function handleLeave(ws: WebSocket, msg: WSMessage) {
-  const { sessionId, userId } = msg;
+async function handleLeave(ws: WebSocket, msg: WSMessage, userId: string) {
+  const { sessionId } = msg;
   
-  // Update participant
+  // Verify participant authorization (allow leave even if not found)
   const participant = await storage.getCollabParticipantByUserAndSession(userId, sessionId);
   if (participant) {
     await storage.removeCollabParticipant(participant.id);
@@ -190,16 +282,20 @@ async function handleLeave(ws: WebSocket, msg: WSMessage) {
   broadcast(sessionId, {
     type: "participant_left",
     sessionId,
-    userId,
     data: { userId },
   });
 }
 
-async function handleTabSwitch(ws: WebSocket, msg: WSMessage) {
-  const { sessionId, userId } = msg;
+async function handleTabSwitch(ws: WebSocket, msg: WSMessage, userId: string) {
+  const { sessionId } = msg;
   
-  // Update participant tab switch count
+  // Verify participant authorization
   const participant = await storage.getCollabParticipantByUserAndSession(userId, sessionId);
+  if (!participant) {
+    ws.close(1008, "Unauthorized");
+    return;
+  }
+  
   if (participant) {
     await storage.updateCollabParticipant(participant.id, {
       tabSwitches: participant.tabSwitches + 1,
@@ -217,16 +313,21 @@ async function handleTabSwitch(ws: WebSocket, msg: WSMessage) {
     broadcast(sessionId, {
       type: "tab_switch",
       sessionId,
-      userId,
       data: { userId, count: participant.tabSwitches + 1 },
     });
   }
 }
 
-async function handlePause(ws: WebSocket, msg: WSMessage) {
-  const { sessionId, userId } = msg;
+async function handlePause(ws: WebSocket, msg: WSMessage, userId: string) {
+  const { sessionId } = msg;
   
+  // Verify participant authorization
   const participant = await storage.getCollabParticipantByUserAndSession(userId, sessionId);
+  if (!participant) {
+    ws.close(1008, "Unauthorized");
+    return;
+  }
+  
   if (participant) {
     await storage.updateCollabParticipant(participant.id, {
       pauseCount: participant.pauseCount + 1,
@@ -241,14 +342,20 @@ async function handlePause(ws: WebSocket, msg: WSMessage) {
     broadcast(sessionId, {
       type: "participant_paused",
       sessionId,
-      userId,
       data: { userId },
     });
   }
 }
 
-async function handleUnpause(ws: WebSocket, msg: WSMessage) {
-  const { sessionId, userId } = msg;
+async function handleUnpause(ws: WebSocket, msg: WSMessage, userId: string) {
+  const { sessionId } = msg;
+  
+  // Verify participant authorization
+  const participant = await storage.getCollabParticipantByUserAndSession(userId, sessionId);
+  if (!participant) {
+    ws.close(1008, "Unauthorized");
+    return;
+  }
   
   await storage.createCollabActivity({
     sessionId,
@@ -259,15 +366,20 @@ async function handleUnpause(ws: WebSocket, msg: WSMessage) {
   broadcast(sessionId, {
     type: "participant_unpaused",
     sessionId,
-    userId,
     data: { userId },
   });
 }
 
-async function handleBreakStart(ws: WebSocket, msg: WSMessage) {
-  const { sessionId, userId, data } = msg;
+async function handleBreakStart(ws: WebSocket, msg: WSMessage, userId: string) {
+  const { sessionId, data } = msg;
   
+  // Verify participant authorization
   const participant = await storage.getCollabParticipantByUserAndSession(userId, sessionId);
+  if (!participant) {
+    ws.close(1008, "Unauthorized");
+    return;
+  }
+  
   if (participant) {
     await storage.updateCollabParticipant(participant.id, {
       isOnBreak: true,
@@ -285,16 +397,21 @@ async function handleBreakStart(ws: WebSocket, msg: WSMessage) {
     broadcast(sessionId, {
       type: "break_started",
       sessionId,
-      userId,
       data: { userId, duration: data?.duration },
     });
   }
 }
 
-async function handleBreakEnd(ws: WebSocket, msg: WSMessage) {
-  const { sessionId, userId, data } = msg;
+async function handleBreakEnd(ws: WebSocket, msg: WSMessage, userId: string) {
+  const { sessionId, data } = msg;
   
+  // Verify participant authorization
   const participant = await storage.getCollabParticipantByUserAndSession(userId, sessionId);
+  if (!participant) {
+    ws.close(1008, "Unauthorized");
+    return;
+  }
+  
   if (participant) {
     const breakDuration = data?.actualDuration || 0;
     await storage.updateCollabParticipant(participant.id, {
@@ -314,29 +431,41 @@ async function handleBreakEnd(ws: WebSocket, msg: WSMessage) {
     broadcast(sessionId, {
       type: "break_ended",
       sessionId,
-      userId,
       data: { userId },
     });
   }
 }
 
-async function handleWhiteboardUpdate(ws: WebSocket, msg: WSMessage) {
-  const { sessionId, userId, data } = msg;
+async function handleWhiteboardUpdate(ws: WebSocket, msg: WSMessage, userId: string) {
+  const { sessionId, data } = msg;
+  
+  // Verify participant authorization
+  const participant = await storage.getCollabParticipantByUserAndSession(userId, sessionId);
+  if (!participant) {
+    ws.close(1008, "Unauthorized");
+    return;
+  }
   
   // Broadcast whiteboard changes to all other participants
   broadcast(sessionId, {
     type: "whiteboard_update",
     sessionId,
-    userId,
     data: data,
   }, ws);
 }
 
-async function handleMuteParticipant(ws: WebSocket, msg: WSMessage) {
-  const { sessionId, userId, data } = msg;
+async function handleMuteParticipant(ws: WebSocket, msg: WSMessage, userId: string) {
+  const { sessionId, data } = msg;
   const targetUserId = data?.targetUserId;
   
   if (!targetUserId) return;
+  
+  // Verify sender is participant and authorized
+  const senderParticipant = await storage.getCollabParticipantByUserAndSession(userId, sessionId);
+  if (!senderParticipant) {
+    ws.close(1008, "Unauthorized");
+    return;
+  }
 
   const participant = await storage.getCollabParticipantByUserAndSession(targetUserId, sessionId);
   if (participant) {
@@ -347,17 +476,23 @@ async function handleMuteParticipant(ws: WebSocket, msg: WSMessage) {
     broadcast(sessionId, {
       type: "participant_muted",
       sessionId,
-      userId,
       data: { targetUserId, isMuted: !participant.isMuted },
     });
   }
 }
 
-async function handleKickParticipant(ws: WebSocket, msg: WSMessage) {
-  const { sessionId, userId, data } = msg;
+async function handleKickParticipant(ws: WebSocket, msg: WSMessage, userId: string) {
+  const { sessionId, data } = msg;
   const targetUserId = data?.targetUserId;
   
   if (!targetUserId) return;
+  
+  // Verify sender is participant
+  const senderParticipant = await storage.getCollabParticipantByUserAndSession(userId, sessionId);
+  if (!senderParticipant) {
+    ws.close(1008, "Unauthorized");
+    return;
+  }
 
   // Verify sender is host
   const session = await storage.getCollabSession(sessionId);
@@ -372,15 +507,21 @@ async function handleKickParticipant(ws: WebSocket, msg: WSMessage) {
       broadcast(sessionId, {
         type: "participant_kicked",
         sessionId,
-        userId,
         data: { targetUserId },
       });
     }
   }
 }
 
-async function handleMuteAll(ws: WebSocket, msg: WSMessage) {
-  const { sessionId, userId } = msg;
+async function handleMuteAll(ws: WebSocket, msg: WSMessage, userId: string) {
+  const { sessionId } = msg;
+  
+  // Verify sender is participant
+  const senderParticipant = await storage.getCollabParticipantByUserAndSession(userId, sessionId);
+  if (!senderParticipant) {
+    ws.close(1008, "Unauthorized");
+    return;
+  }
   
   // Verify sender is host
   const session = await storage.getCollabSession(sessionId);
@@ -398,14 +539,20 @@ async function handleMuteAll(ws: WebSocket, msg: WSMessage) {
     broadcast(sessionId, {
       type: "all_muted",
       sessionId,
-      userId,
       data: {},
     });
   }
 }
 
-async function handleConcentrationToggle(ws: WebSocket, msg: WSMessage) {
-  const { sessionId, userId, data } = msg;
+async function handleConcentrationToggle(ws: WebSocket, msg: WSMessage, userId: string) {
+  const { sessionId, data } = msg;
+  
+  // Verify sender is participant
+  const senderParticipant = await storage.getCollabParticipantByUserAndSession(userId, sessionId);
+  if (!senderParticipant) {
+    ws.close(1008, "Unauthorized");
+    return;
+  }
   
   // Verify sender is host
   const session = await storage.getCollabSession(sessionId);
@@ -418,7 +565,6 @@ async function handleConcentrationToggle(ws: WebSocket, msg: WSMessage) {
     broadcast(sessionId, {
       type: "concentration_toggled",
       sessionId,
-      userId,
       data: { enabled: newMode },
     });
   }

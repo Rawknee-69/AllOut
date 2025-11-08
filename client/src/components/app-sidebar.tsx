@@ -22,6 +22,7 @@ import {
   CheckSquare,
   Timer,
   Focus,
+  Users,
   User,
   LogOut,
 } from "lucide-react";
@@ -47,6 +48,7 @@ const productivityItems = [
   { title: "To-Do List", url: "/todos", icon: CheckSquare },
   { title: "Pomodoro", url: "/pomodoro", icon: Timer },
   { title: "Concentration", url: "/concentration", icon: Focus },
+  { title: "Collaboration", url: "/collab", icon: Users },
 ];
 
 export function AppSidebar() {
