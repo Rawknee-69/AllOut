@@ -559,6 +559,7 @@ Your goal is to ensure that even the most difficult concepts become easy to unde
       // Use Gemini to generate mind map structure
       const prompt = `Generate a mind map structure for this study material titled "${material.title}". 
       Return ONLY a JSON object with a hierarchical node structure. Each node should have 'id', 'label', and 'children' (array of child nodes).
+      Use plain text only for labels - no asterisks, underscores, or markdown syntax.
       Example: {"id": "root", "label": "Main Topic", "children": [{"id": "1", "label": "Subtopic 1", "children": []}, ...]}`;
 
       const result = await genAI.models.generateContent({
@@ -575,12 +576,24 @@ Your goal is to ensure that even the most difficult concepts become easy to unde
       
       const mindMapContent = JSON.parse(jsonMatch[0]);
 
+      // Recursively sanitize node labels
+      function sanitizeNode(node: any): any {
+        if (!node) return node;
+        return {
+          ...node,
+          label: sanitizeMarkdown(node.label || ""),
+          children: (node.children || []).map(sanitizeNode),
+        };
+      }
+
+      const sanitizedContent = sanitizeNode(mindMapContent);
+
       // Save mind map to database
       const mindMap = await storage.createMindMap({
         userId,
         materialId,
         title: `${material.title} Mind Map`,
-        content: mindMapContent,
+        content: sanitizedContent,
       });
 
       res.json(mindMap);
