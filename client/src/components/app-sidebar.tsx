@@ -64,7 +64,7 @@ export function AppSidebar() {
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2">
           <BookOpen className="h-6 w-6 text-primary" />
-          <span className="font-heading font-bold text-xl">StudyMaster</span>
+          <span className="font-heading font-bold text-xl">All Out</span>
         </div>
       </SidebarHeader>
 
@@ -92,7 +92,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Gamification</SidebarGroupLabel>
+          <SidebarGroupLabel>Progress</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {gamificationItems.map((item) => (
