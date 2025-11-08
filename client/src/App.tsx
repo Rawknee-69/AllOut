@@ -16,6 +16,7 @@ import MaterialDetail from "@/pages/material-detail";
 import Chat from "@/pages/chat";
 import Flashcards from "@/pages/flashcards";
 import Quizzes from "@/pages/quizzes";
+import MindMaps from "@/pages/mind-maps";
 import Summaries from "@/pages/summaries";
 import Todos from "@/pages/todos";
 import Pomodoro from "@/pages/pomodoro";
@@ -40,6 +41,7 @@ function Router() {
           <Route path="/chat" component={Chat} />
           <Route path="/flashcards" component={Flashcards} />
           <Route path="/quizzes" component={Quizzes} />
+          <Route path="/mind-maps" component={MindMaps} />
           <Route path="/summaries" component={Summaries} />
           <Route path="/todos" component={Todos} />
           <Route path="/pomodoro" component={Pomodoro} />

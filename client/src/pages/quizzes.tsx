@@ -95,10 +95,11 @@ export default function Quizzes() {
   const generateMutation = useMutation<QuizWithQuestions, Error, void>({
     mutationFn: async () => {
       if (!selectedMaterial) throw new Error("No material selected");
-      return await apiRequest("POST", "/api/quizzes/generate", {
+      const response = await apiRequest("POST", "/api/quizzes/generate", {
         materialId: selectedMaterial,
         questionCount: parseInt(questionCount),
       });
+      return response.json();
     },
     onSuccess: (quiz: QuizWithQuestions) => {
       queryClient.invalidateQueries({ queryKey: ["/api/quizzes", selectedMaterial] });
