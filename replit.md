@@ -25,6 +25,7 @@ Preferred communication style: Simple, everyday language.
 - Custom color scheme: Indigo (primary), Purple (gamification), Emerald (success), Amber (warnings), Pink (accents)
 - Typography: Inter for UI/body text, Poppins for headings
 - Responsive design with mobile-first approach using Tailwind breakpoints
+- Interactive mind map visualization using React Flow with collapsible nodes and Dagre auto-layout
 
 **State Management**
 - TanStack Query (React Query) for server state management, data fetching, and caching
@@ -157,6 +158,8 @@ Database indexes on frequently queried fields (user_id, session expiry)
 - react-day-picker for calendar/date selection
 - Embla carousel for image/content carousels
 - Vaul for drawer components
+- React Flow for interactive node-based graph visualization (mind maps)
+- Dagre for automatic graph layout algorithm
 
 **Utility Libraries**
 - Zod for runtime schema validation
