@@ -22,8 +22,8 @@ export async function generateAudioFromText(options: TextToSpeechOptions): Promi
       { text },
       {
         model,
-        encoding: "mp3",
-        container: "mp3",
+        encoding: "linear16",
+        container: "wav",
       }
     );
 

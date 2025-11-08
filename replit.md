@@ -89,8 +89,10 @@ Preferred communication style: Simple, everyday language.
 - Deepgram API via `@deepgram/sdk` for text-to-speech
 - Converts educational summaries into spoken audio explanations
 - Uses aura-asteria-en voice model for natural, clear speech
+- Audio format: WAV (linear16 encoding) for universal browser compatibility
 - Audio files stored in object storage with private ACL policies
 - Graceful degradation: summaries created even if audio generation fails
+- Available on both Summaries page and Material Detail page under AI Tools
 
 **Error Handling**
 - Centralized error handling with try-catch blocks
@@ -115,7 +117,7 @@ Core entities:
 - **Quizzes**: Generated quiz questions with multiple choice options
 - **Quiz Attempts**: User quiz submissions and scores for leaderboard
 - **Mind Maps**: Visual concept maps in JSON format
-- **Summaries**: AI-generated educational summaries with optional audio (audioUrl field for Deepgram-generated MP3 files)
+- **Summaries**: AI-generated educational summaries with optional audio (audioUrl field for Deepgram-generated WAV files)
 - **Study Sessions**: Time tracking for streak and leaderboard calculations with enhanced pause functionality including pause count, pause duration (seconds), and pause reasons (jsonb array)
 - **Todos**: Task management with completion tracking
 - **Pomodoro Sessions**: Timer sessions for productivity tracking
