@@ -140,79 +140,88 @@ export default function Concentration() {
   }, [elapsedTime, tabSwitches, timeWasted]);
 
   useEffect(() => {
-    if (isActive && currentSessionId) {
-      timerRef.current = setInterval(() => {
-        setElapsedTime((prev) => prev + 1);
-      }, 1000);
-
-      beepIntervalRef.current = setInterval(() => {
-        playBeep();
-        toast({
-          title: "5 Minutes Passed",
-          description: "Keep focusing!",
-        });
-      }, 5 * 60 * 1000);
-
-      autoSaveIntervalRef.current = setInterval(() => {
-        updateSessionMutation.mutate({
-          sessionId: currentSessionId,
-          duration: Math.floor(elapsedTimeRef.current / 60),
-          tabSwitches: tabSwitchesRef.current,
-          timeWasted: Math.floor(timeWastedRef.current / 60),
-        });
-      }, 30 * 1000);
-
-      const handleVisibilityChange = () => {
-        if (document.hidden) {
-          tabLeftTimeRef.current = Date.now();
-        } else {
-          if (tabLeftTimeRef.current) {
-            const wastedSeconds = Math.floor((Date.now() - tabLeftTimeRef.current) / 1000);
-            setTimeWasted((prev) => prev + wastedSeconds);
-            setTabSwitches((prev) => prev + 1);
-            
-            toast({
-              title: "Tab Switch Detected",
-              description: `Lost focus for ${wastedSeconds} seconds. Stay concentrated!`,
-              variant: "destructive",
-            });
-            
-            tabLeftTimeRef.current = null;
-          }
-        }
-      };
-
-      document.addEventListener("visibilitychange", handleVisibilityChange);
-
-      return () => {
-        if (timerRef.current) clearInterval(timerRef.current);
-        if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
-        if (autoSaveIntervalRef.current) clearInterval(autoSaveIntervalRef.current);
-        document.removeEventListener("visibilitychange", handleVisibilityChange);
-      };
-    }
-
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
       if (autoSaveIntervalRef.current) clearInterval(autoSaveIntervalRef.current);
     };
-  }, [isActive, currentSessionId]);
+  }, []);
 
-  const handleStart = () => {
-    setIsActive(true);
+  const startTimers = (sessionId: string) => {
+    timerRef.current = setInterval(() => {
+      setElapsedTime((prev) => prev + 1);
+    }, 1000);
+
+    beepIntervalRef.current = setInterval(() => {
+      playBeep();
+      toast({
+        title: "5 Minutes Passed",
+        description: "Keep focusing!",
+      });
+    }, 5 * 60 * 1000);
+
+    autoSaveIntervalRef.current = setInterval(() => {
+      updateSessionMutation.mutate({
+        sessionId,
+        duration: Math.floor(elapsedTimeRef.current / 60),
+        tabSwitches: tabSwitchesRef.current,
+        timeWasted: Math.floor(timeWastedRef.current / 60),
+      });
+    }, 30 * 1000);
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        tabLeftTimeRef.current = Date.now();
+      } else {
+        if (tabLeftTimeRef.current) {
+          const wastedSeconds = Math.floor((Date.now() - tabLeftTimeRef.current) / 1000);
+          setTimeWasted((prev) => prev + wastedSeconds);
+          setTabSwitches((prev) => prev + 1);
+          
+          toast({
+            title: "Tab Switch Detected",
+            description: `Lost focus for ${wastedSeconds} seconds. Stay concentrated!`,
+            variant: "destructive",
+          });
+          
+          tabLeftTimeRef.current = null;
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+  };
+
+  const stopTimers = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+    if (autoSaveIntervalRef.current) clearInterval(autoSaveIntervalRef.current);
+    document.removeEventListener("visibilitychange", () => {});
+  };
+
+  const handleStart = async () => {
     setElapsedTime(0);
     setTabSwitches(0);
     setTimeWasted(0);
-    startSessionMutation.mutate();
     
-    toast({
-      title: "Concentration Mode Started",
-      description: "Stay focused! Beeps will sound every 5 minutes.",
-    });
+    try {
+      const data: any = await startSessionMutation.mutateAsync();
+      setCurrentSessionId(data.id);
+      setIsActive(true);
+      
+      startTimers(data.id);
+      
+      toast({
+        title: "Concentration Mode Started",
+        description: "Stay focused! Beeps will sound every 5 minutes.",
+      });
+    } catch (error) {
+      console.error("Failed to start session:", error);
+    }
   };
 
   const handleStop = () => {
+    stopTimers();
     setIsActive(false);
     
     if (currentSessionId) {
@@ -291,7 +300,7 @@ export default function Concentration() {
                   <Button
                     size="lg"
                     onClick={handleStart}
-                    data-testid="button-start"
+                    data-testid="button-start-session"
                   >
                     <Play className="h-5 w-5 mr-2" />
                     Start Concentrating
@@ -301,7 +310,7 @@ export default function Concentration() {
                     size="lg"
                     onClick={handleStop}
                     variant="destructive"
-                    data-testid="button-stop"
+                    data-testid="button-end-session"
                   >
                     <Square className="h-5 w-5 mr-2" />
                     End Session
