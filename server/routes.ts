@@ -19,7 +19,7 @@ import {
 } from "@shared/schema";
 
 // Initialize Gemini AI
-const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY!);
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
 // Setup multer for file uploads (in-memory storage)
 const upload = multer({ storage: multer.memoryStorage() });
@@ -212,13 +212,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Use Gemini to generate flashcards
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const prompt = `Generate ${count} flashcards from this study material titled "${material.title}". 
       Return ONLY a JSON array with objects containing 'question' and 'answer' fields. No additional text.
       Example format: [{"question": "What is X?", "answer": "X is..."}, ...]`;
 
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const result = await genAI.models.generateContent({
+        model: "gemini-2.0-flash-exp",
+        contents: prompt,
+      });
+      const text = result.text;
       
       // Extract JSON from response
       const jsonMatch = text.match(/\[[\s\S]*\]/);
@@ -315,13 +317,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Use Gemini to generate quiz
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const prompt = `Generate ${questionCount} multiple choice quiz questions from this study material titled "${material.title}". 
       Return ONLY a JSON array with objects containing 'question', 'options' (array of 4 choices), and 'correctAnswer' (the correct option text). No additional text.
       Example format: [{"question": "What is X?", "options": ["A", "B", "C", "D"], "correctAnswer": "A"}, ...]`;
 
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const result = await genAI.models.generateContent({
+        model: "gemini-2.0-flash-exp",
+        contents: prompt,
+      });
+      const text = result.text;
       
       // Extract JSON from response
       const jsonMatch = text.match(/\[[\s\S]*\]/);
@@ -420,12 +424,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Use Gemini to generate summary
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const prompt = `Generate a comprehensive summary of this study material titled "${material.title}". 
       Include key points, main concepts, and important details. Format with clear headings and bullet points.`;
 
-      const result = await model.generateContent(prompt);
-      const content = result.response.text();
+      const result = await genAI.models.generateContent({
+        model: "gemini-2.0-flash-exp",
+        contents: prompt,
+      });
+      const content = result.text;
 
       // Save summary to database
       const summary = await storage.createSummary({
@@ -469,13 +475,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Use Gemini to generate mind map structure
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const prompt = `Generate a mind map structure for this study material titled "${material.title}". 
       Return ONLY a JSON object with a hierarchical node structure. Each node should have 'id', 'label', and 'children' (array of child nodes).
       Example: {"id": "root", "label": "Main Topic", "children": [{"id": "1", "label": "Subtopic 1", "children": []}, ...]}`;
 
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const result = await genAI.models.generateContent({
+        model: "gemini-2.0-flash-exp",
+        contents: prompt,
+      });
+      const text = result.text;
       
       // Extract JSON from response
       const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -536,8 +544,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : [];
 
       // Generate AI response using Gemini
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      
       let prompt = content;
       if (materialId) {
         const material = await storage.getStudyMaterial(materialId);
@@ -550,8 +556,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const result = await model.generateContent(prompt);
-      const aiResponse = result.response.text();
+      const result = await genAI.models.generateContent({
+        model: "gemini-2.0-flash-exp",
+        contents: prompt,
+      });
+      const aiResponse = result.text;
 
       // Save AI response
       const assistantMessage = await storage.createChatMessage({
