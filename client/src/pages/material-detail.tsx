@@ -52,7 +52,17 @@ export default function MaterialDetail() {
   });
 
   const { data: summary, isLoading: summaryLoading } = useQuery<Summary>({
-    queryKey: ["/api/summaries", id],
+    queryKey: ["/api/summaries", "material", id],
+    queryFn: async () => {
+      const response = await fetch(`/api/summaries?materialId=${id}`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        if (response.status === 404) return null;
+        throw new Error("Failed to fetch summary");
+      }
+      return response.json();
+    },
     enabled: isAuthenticated && !!id,
   });
 
@@ -63,7 +73,8 @@ export default function MaterialDetail() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/summaries", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/summaries", "material", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/summaries"] });
       toast({
         title: "Success",
         description: "Audio summary generated successfully! You can now listen to it below.",

@@ -18,6 +18,7 @@ import Flashcards from "@/pages/flashcards";
 import Quizzes from "@/pages/quizzes";
 import MindMaps from "@/pages/mind-maps";
 import Summaries from "@/pages/summaries";
+import AudioLibrary from "@/pages/audio-library";
 import Todos from "@/pages/todos";
 import Pomodoro from "@/pages/pomodoro";
 import Concentration from "@/pages/concentration";
@@ -43,6 +44,7 @@ function Router() {
           <Route path="/quizzes" component={Quizzes} />
           <Route path="/mind-maps" component={MindMaps} />
           <Route path="/summaries" component={Summaries} />
+          <Route path="/audio-library" component={AudioLibrary} />
           <Route path="/todos" component={Todos} />
           <Route path="/pomodoro" component={Pomodoro} />
           <Route path="/concentration" component={Concentration} />

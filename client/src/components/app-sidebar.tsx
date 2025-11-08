@@ -17,6 +17,7 @@ import {
   Target,
   Map,
   FileStack,
+  Volume2,
   Trophy,
   CheckSquare,
   Timer,
@@ -35,6 +36,7 @@ const studyItems = [
   { title: "Quizzes", url: "/quizzes", icon: Target },
   { title: "Mind Maps", url: "/mind-maps", icon: Map },
   { title: "Summaries", url: "/summaries", icon: FileStack },
+  { title: "Audio Library", url: "/audio-library", icon: Volume2 },
 ];
 
 const gamificationItems = [
