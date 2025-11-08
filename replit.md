@@ -109,7 +109,7 @@ Core entities:
 - **Quiz Attempts**: User quiz submissions and scores for leaderboard
 - **Mind Maps**: Visual concept maps in JSON format
 - **Summaries**: AI-generated text/audio/video summaries
-- **Study Sessions**: Time tracking for streak and leaderboard calculations
+- **Study Sessions**: Time tracking for streak and leaderboard calculations with enhanced pause functionality including pause count, pause duration (seconds), and pause reasons (jsonb array)
 - **Todos**: Task management with completion tracking
 - **Pomodoro Sessions**: Timer sessions for productivity tracking
 - **Chat Messages**: Conversation history with AI chatbot
