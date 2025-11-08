@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import multer from "multer";
 import { GoogleGenAI } from "@google/genai";
+import { generateAudioFromText } from "./deepgram";
+import { objectStorage } from "./objectStorage";
 import {
   insertStudyMaterialSchema,
   insertFlashcardSchema,
@@ -429,21 +431,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(existingSummary);
       }
 
-      // Use Gemini to generate summary
-      const prompt = `Generate a comprehensive summary of this study material titled "${material.title}". 
-      Include key points, main concepts, and important details. Format with clear headings and bullet points.`;
+      // Use Gemini to generate an educational summary with examples
+      const prompt = `You are an expert tutor helping a student understand the study material titled "${material.title}".
+
+Generate a comprehensive educational summary that:
+1. Explains the main concepts in simple, everyday language
+2. Provides real-world examples to illustrate difficult concepts
+3. Uses analogies and metaphors to make complex ideas easy to understand
+4. Breaks down challenging topics step-by-step
+5. Includes practical applications of the concepts
+
+Make the explanation engaging and conversational, as if you're speaking directly to the student.
+Format the summary to be clear and well-organized with headings and bullet points.
+
+Your goal is to ensure that even the most difficult concepts become easy to understand through your explanations and examples.`;
 
       const result = await genAI.models.generateContent({
         model: "gemini-2.0-flash-exp",
         contents: prompt,
       });
-      const content = result.text;
+      const content = result.text || "";
 
-      // Save summary to database
+      // Generate audio from the summary using Deepgram
+      let audioUrl: string | null = null;
+      try {
+        console.log("Generating audio summary with Deepgram...");
+        const audioBuffer = await generateAudioFromText({ 
+          text: content,
+          model: "aura-asteria-en" // Natural, clear voice for educational content
+        });
+
+        // Upload audio to object storage
+        const audioFileName = `summaries/audio_${materialId}_${Date.now()}.mp3`;
+        await objectStorage.uploadFile(audioFileName, audioBuffer, "audio/mpeg");
+        audioUrl = `/objects/${audioFileName}`;
+        console.log("Audio summary generated and uploaded:", audioUrl);
+      } catch (audioError) {
+        console.error("Error generating audio summary:", audioError);
+        // Continue without audio if generation fails
+      }
+
+      // Save summary to database with audio URL
       const summary = await storage.createSummary({
         userId,
         materialId,
         content,
+        audioUrl,
       });
 
       res.json(summary);

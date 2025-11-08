@@ -209,7 +209,29 @@ export class ObjectStorageService {
       requestedPermission: requestedPermission ?? ObjectPermission.READ,
     });
   }
+
+  async uploadFile(
+    filePath: string,
+    fileBuffer: Buffer,
+    contentType: string = "application/octet-stream"
+  ): Promise<void> {
+    const privateObjectDir = this.getPrivateObjectDir();
+    const fullPath = `${privateObjectDir}/${filePath}`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+
+    await file.save(fileBuffer, {
+      contentType,
+      metadata: {
+        contentType,
+      },
+    });
+  }
 }
+
+export const objectStorage = new ObjectStorageService();
 
 function parseObjectPath(path: string): {
   bucketName: string;
