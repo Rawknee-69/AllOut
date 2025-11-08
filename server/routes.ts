@@ -7,7 +7,7 @@ import { GoogleGenAI } from "@google/genai";
 import { generateAudioFromText } from "./deepgram";
 import { objectStorage } from "./objectStorage";
 import { setObjectAclPolicy } from "./objectAcl";
-import { sanitizeMarkdown, sanitizeUserInput } from "./textUtils";
+import { sanitizeMarkdown, sanitizeUserInput, sanitizeForAudio, sanitizeMindMapNode } from "./textUtils";
 import {
   insertStudyMaterialSchema,
   insertFlashcardSchema,
@@ -446,7 +446,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If summary exists but no audio, we'll regenerate both for consistency
       let content = "";
       if (existingSummary) {
-        content = existingSummary.content;
+        // Sanitize existing content in case it has old markdown
+        content = sanitizeMarkdown(existingSummary.content);
       } else {
 
         // Use Gemini to generate an educational summary with examples
@@ -462,7 +463,12 @@ Generate a comprehensive educational summary that:
 Make the explanation engaging and conversational, as if you're speaking directly to the student.
 Format the summary to be clear and well-organized with headings and sections.
 
-IMPORTANT: Use plain text only. Do not use markdown formatting like asterisks, underscores, or special characters for emphasis.
+IMPORTANT: 
+- Use plain text only. Do not use markdown formatting like asterisks, underscores, or special characters for emphasis.
+- If the content includes mathematical formulas, symbols, or equations, ALWAYS spell them out in words so they sound natural when spoken aloud.
+- For example, write "alpha" instead of "α", "sum" instead of "∑", "pi" instead of "π"
+- Write "x equals 2" instead of "x = 2", "x squared" instead of "x²"
+- Make all mathematical content readable and understandable when spoken.
 
 Your goal is to ensure that even the most difficult concepts become easy to understand through your explanations and examples.`;
 
@@ -478,8 +484,13 @@ Your goal is to ensure that even the most difficult concepts become easy to unde
       let audioUrl: string | null = null;
       try {
         console.log("Generating audio summary with Deepgram...");
+        
+        // Sanitize content for audio - removes markdown and converts symbols to readable text
+        const audioText = sanitizeForAudio(content);
+        console.log("Text sanitized for audio, length:", audioText.length);
+        
         const audioBuffer = await generateAudioFromText({ 
-          text: content,
+          text: audioText,
           model: "aura-asteria-en" // Natural, clear voice for educational content
         });
 
@@ -577,16 +588,7 @@ Your goal is to ensure that even the most difficult concepts become easy to unde
       const mindMapContent = JSON.parse(jsonMatch[0]);
 
       // Recursively sanitize node labels
-      function sanitizeNode(node: any): any {
-        if (!node) return node;
-        return {
-          ...node,
-          label: sanitizeMarkdown(node.label || ""),
-          children: (node.children || []).map(sanitizeNode),
-        };
-      }
-
-      const sanitizedContent = sanitizeNode(mindMapContent);
+      const sanitizedContent = sanitizeMindMapNode(mindMapContent);
 
       // Save mind map to database
       const mindMap = await storage.createMindMap({
