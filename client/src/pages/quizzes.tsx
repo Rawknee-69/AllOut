@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Quizzes() {
   const { toast } = useToast();
@@ -280,72 +281,121 @@ export default function Quizzes() {
     const answeredCount = Object.keys(answers).length;
 
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {isQuizCancelled && (
-          <Card className="p-4 mb-4 bg-destructive/10 border-destructive" data-testid="card-cancelled">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              <p className="text-destructive font-semibold">
-                Quiz Cancelled - Tab switching detected
-              </p>
-            </div>
-          </Card>
-        )}
+      <div className="container mx-auto px-4 py-6 md:py-8 max-w-4xl">
+        <AnimatePresence>
+          {isQuizCancelled && (
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="p-4 mb-6 bg-destructive/10 border-2 border-destructive" data-testid="card-cancelled">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-full bg-gradient-to-br from-destructive/30 to-destructive/10">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                  </div>
+                  <p className="text-destructive font-semibold">
+                    Quiz Cancelled - Tab switching detected
+                  </p>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        <div className="mb-6">
-          <h1 className="font-heading font-bold text-2xl mb-2" data-testid="text-quiz-title">
-            {activeQuiz.title}
-          </h1>
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <p>
-              Question {currentQuestionIndex + 1} of {activeQuiz.questions.length}
-            </p>
-            <p>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-6"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10">
+              <Target className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+            </div>
+            <h1 className="font-heading font-bold text-xl md:text-2xl" data-testid="text-quiz-title">
+              {activeQuiz.title}
+            </h1>
+          </div>
+          <div className="flex items-center justify-between text-sm md:text-base text-muted-foreground mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border">
+              <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
+              <span className="font-medium">
+                Question {currentQuestionIndex + 1} of {activeQuiz.questions.length}
+              </span>
+            </div>
+            <p className="font-medium">
               Answered: {answeredCount}/{activeQuiz.questions.length}
             </p>
           </div>
-          <Progress value={progress} className="mt-2" />
-        </div>
+          <Progress value={progress} className="h-2" />
+        </motion.div>
 
-        <Card className="p-8 mb-6" data-testid={`card-question-${currentQuestionIndex}`}>
-          <h2 className="font-heading font-semibold text-xl mb-6">
-            {currentQuestion.question}
-          </h2>
-          <RadioGroup
-            value={answers[currentQuestionIndex] || ""}
-            onValueChange={handleAnswerChange}
-            disabled={isQuizCancelled}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentQuestionIndex}
+            initial={{ opacity: 0, x: 20, scale: 0.98 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -20, scale: 0.98 }}
+            transition={{ duration: 0.3, ease: [0.43, 0.13, 0.23, 0.96] }}
           >
-            {currentQuestion.options.map((option: string, index: number) => (
-              <div
-                key={index}
-                className="flex items-center space-x-2 p-4 rounded-lg hover-elevate"
-                data-testid={`option-${index}`}
+            <Card className="p-6 md:p-8 mb-6 border-2 shadow-lg" data-testid={`card-question-${currentQuestionIndex}`}>
+              <motion.h2
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="font-heading font-semibold text-lg md:text-xl mb-6 leading-relaxed"
               >
-                <RadioGroupItem value={option} id={`option-${index}`} />
-                <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
-                  {option}
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
-        </Card>
+                {currentQuestion.question}
+              </motion.h2>
+              <RadioGroup
+                value={answers[currentQuestionIndex] || ""}
+                onValueChange={handleAnswerChange}
+                disabled={isQuizCancelled}
+              >
+                {currentQuestion.options.map((option: string, index: number) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 + index * 0.05 }}
+                    className="flex items-center space-x-3 p-4 rounded-xl hover-elevate border-2 mb-3 last:mb-0"
+                    data-testid={`option-${index}`}
+                  >
+                    <RadioGroupItem value={option} id={`option-${index}`} />
+                    <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer text-sm md:text-base">
+                      {option}
+                    </Label>
+                  </motion.div>
+                ))}
+              </RadioGroup>
+            </Card>
+          </motion.div>
+        </AnimatePresence>
 
-        <div className="flex justify-between">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="flex flex-col sm:flex-row justify-between gap-4"
+        >
           <Button
             variant="outline"
             onClick={handlePrevious}
             disabled={currentQuestionIndex === 0}
             data-testid="button-previous"
+            className="w-full sm:w-auto shadow-sm"
           >
             Previous
           </Button>
-          <div className="flex gap-2">
+          <div className="flex gap-2 justify-end">
             {currentQuestionIndex === activeQuiz.questions.length - 1 ? (
               <Button
                 onClick={handleSubmit}
                 disabled={isQuizCancelled && submitAttemptMutation.isPending}
                 data-testid="button-submit"
+                className="w-full sm:w-auto shadow-sm"
               >
                 {submitAttemptMutation.isPending ? "Submitting..." : "Submit Quiz"}
               </Button>
@@ -354,121 +404,197 @@ export default function Quizzes() {
                 onClick={handleNext}
                 disabled={isQuizCancelled}
                 data-testid="button-next"
+                className="w-full sm:w-auto shadow-sm"
               >
                 Next
               </Button>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8 flex items-center gap-3">
-        <Target className="h-8 w-8 text-primary" />
-        <div className="flex-1">
-          <h1 className="font-heading font-bold text-3xl md:text-4xl mb-2" data-testid="text-quizzes-title">
-            Quizzes
-          </h1>
-          <p className="text-muted-foreground" data-testid="text-quizzes-subtitle">
-            Test your knowledge with AI-generated quizzes
-          </p>
-        </div>
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-4 mb-8">
-        <div className="md:col-span-2">
-          <Label className="mb-2 block">Study Material</Label>
-          <Select value={selectedMaterial || ""} onValueChange={(val) => setSelectedMaterial(val || null)}>
-            <SelectTrigger data-testid="select-material">
-              <SelectValue placeholder="Select study material" />
-            </SelectTrigger>
-            <SelectContent>
-              {materials?.map((material) => (
-                <SelectItem key={material.id} value={material.id} data-testid={`option-material-${material.id}`}>
-                  {material.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className="mb-2 block">Questions</Label>
-          <Input
-            type="number"
-            min="5"
-            max="20"
-            value={questionCount}
-            onChange={(e) => setQuestionCount(e.target.value)}
-            data-testid="input-count"
-          />
-        </div>
-      </div>
-
-      <Button
-        onClick={handleGenerate}
-        disabled={!selectedMaterial || generateMutation.isPending}
-        className="mb-8"
-        data-testid="button-generate"
+    <div className="container mx-auto px-4 py-6 md:py-8 max-w-6xl">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mb-6 md:mb-8"
       >
-        <Sparkles className="h-4 w-4 mr-2" />
-        {generateMutation.isPending ? "Generating..." : "Generate Quiz"}
-      </Button>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        {quizzes && quizzes.length > 0 ? (
-          quizzes.map((quiz) => {
-            const quizAttempts = attempts?.filter((a) => a.quizId === quiz.id) || [];
-            const bestScore = quizAttempts.length > 0
-              ? Math.max(...quizAttempts.map((a) => a.score))
-              : null;
-
-            return (
-              <Card key={quiz.id} className="p-6 hover-elevate" data-testid={`card-quiz-${quiz.id}`}>
-                <div className="flex items-start gap-4 mb-4">
-                  <FileText className="h-10 w-10 text-primary flex-shrink-0" />
-                  <div className="flex-1">
-                    <h3 className="font-heading font-semibold text-lg mb-1">
-                      {quiz.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {quiz.questions.length} questions
-                    </p>
-                    {bestScore !== null && (
-                      <div className="flex items-center gap-1 mt-2">
-                        <Trophy className="h-4 w-4 text-gamification" />
-                        <p className="text-sm font-semibold text-gamification">
-                          Best: {bestScore}%
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  onClick={() => startQuiz(quiz)}
-                  className="w-full"
-                  data-testid={`button-start-${quiz.id}`}
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  Start Quiz
-                </Button>
-              </Card>
-            );
-          })
-        ) : (
-          <Card className="p-12 text-center md:col-span-2" data-testid="card-empty-state">
-            <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-heading font-semibold text-lg mb-2">No Quizzes Yet</h3>
-            <p className="text-muted-foreground">
-              {selectedMaterial
-                ? "Generate a quiz with AI to get started"
-                : "Select a study material to create quizzes"}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 backdrop-blur-sm">
+            <Target className="h-6 w-6 md:h-7 md:w-7 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h1 className="font-heading font-bold text-2xl md:text-3xl" data-testid="text-quizzes-title">
+              Quizzes
+            </h1>
+            <p className="text-muted-foreground text-sm md:text-base" data-testid="text-quizzes-subtitle">
+              Test your knowledge with AI-generated quizzes
             </p>
-          </Card>
+          </div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="grid md:grid-cols-3 gap-4 mb-6"
+        >
+          <div className="md:col-span-2">
+            <Label className="mb-2 block text-sm font-medium">Study Material</Label>
+            <Select value={selectedMaterial || ""} onValueChange={(val) => setSelectedMaterial(val || null)}>
+              <SelectTrigger data-testid="select-material" className="border-2">
+                <SelectValue placeholder="Select study material" />
+              </SelectTrigger>
+              <SelectContent>
+                {materials?.map((material) => (
+                  <SelectItem key={material.id} value={material.id} data-testid={`option-material-${material.id}`}>
+                    {material.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="mb-2 block text-sm font-medium">Questions</Label>
+            <Input
+              type="number"
+              min="5"
+              max="20"
+              value={questionCount}
+              onChange={(e) => setQuestionCount(e.target.value)}
+              data-testid="input-count"
+              className="border-2"
+            />
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
+          <Button
+            onClick={handleGenerate}
+            disabled={!selectedMaterial || generateMutation.isPending}
+            className="w-full sm:w-auto mb-8 shadow-sm"
+            data-testid="button-generate"
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            {generateMutation.isPending ? "Generating..." : "Generate Quiz"}
+          </Button>
+        </motion.div>
+      </motion.div>
+
+      <AnimatePresence mode="wait">
+        {quizzes && quizzes.length > 0 ? (
+          <motion.div
+            key="quizzes"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+            className="grid md:grid-cols-2 gap-6"
+          >
+            {quizzes.map((quiz, index) => {
+              const quizAttempts = attempts?.filter((a) => a.quizId === quiz.id) || [];
+              const bestScore = quizAttempts.length > 0
+                ? Math.max(...quizAttempts.map((a) => a.score))
+                : null;
+
+              return (
+                <motion.div
+                  key={quiz.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                >
+                  <Card className="p-6 hover-elevate border-2 shadow-sm" data-testid={`card-quiz-${quiz.id}`}>
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex-shrink-0">
+                        <FileText className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-heading font-semibold text-lg mb-1">
+                          {quiz.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {quiz.questions.length} questions
+                        </p>
+                        {bestScore !== null && (
+                          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-br from-gamification/20 to-gamification/10 border">
+                            <Trophy className="h-3 w-3 text-gamification" />
+                            <p className="text-xs font-semibold text-gamification">
+                              Best: {bestScore}%
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => startQuiz(quiz)}
+                      className="w-full shadow-sm"
+                      data-testid={`button-start-${quiz.id}`}
+                    >
+                      <Play className="h-4 w-4 mr-2" />
+                      Start Quiz
+                    </Button>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="p-8 md:p-12 text-center border-2 border-dashed max-w-2xl mx-auto" data-testid="card-empty-state">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                className="inline-block p-4 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 mb-4"
+              >
+                <Target className="h-12 w-12 md:h-16 md:w-16 text-primary" />
+              </motion.div>
+              <motion.h3
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="font-heading font-semibold text-lg md:text-xl mb-2"
+              >
+                No Quizzes Yet
+              </motion.h3>
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-muted-foreground mb-4 text-sm md:text-base"
+              >
+                {selectedMaterial
+                  ? "Generate a quiz with AI to get started and test your knowledge"
+                  : "Select a study material above to begin creating quizzes"}
+              </motion.p>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="flex items-center gap-1 justify-center text-xs text-muted-foreground"
+              >
+                <div className="h-2 w-2 bg-primary rounded-full animate-pulse"></div>
+                <span>Powered by AI</span>
+              </motion.div>
+            </Card>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
     </div>
   );
 }
