@@ -643,12 +643,17 @@ Your goal is to ensure that even the most difficult concepts become easy to unde
         content: sanitizedContent,
       });
 
+      // Set up SSE headers for streaming
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+
       // Get conversation history
       const history = materialId
         ? await storage.getChatMessagesByMaterial(materialId)
         : [];
 
-      // Generate AI response using Gemini
+      // Generate AI response using Gemini with streaming
       let prompt = sanitizedContent;
       if (materialId) {
         const material = await storage.getStudyMaterial(materialId);
@@ -665,24 +670,41 @@ Your goal is to ensure that even the most difficult concepts become easy to unde
         Provide a helpful, educational response in plain text without any markdown formatting. Do not use asterisks, underscores, or other markdown syntax.`;
       }
 
-      const result = await genAI.models.generateContent({
+      // Send user message ID first
+      res.write(`data: ${JSON.stringify({ type: "userMessage", message: userMessage })}\n\n`);
+
+      let fullResponse = "";
+      
+      // Stream the AI response
+      const stream = await genAI.models.generateContentStream({
         model: "gemini-2.0-flash-exp",
         contents: prompt,
       });
-      const aiResponse = sanitizeMarkdown(result.text || "");
 
-      // Save AI response
+      for await (const chunk of stream) {
+        const text = chunk.text;
+        if (text) {
+          fullResponse += text;
+          const sanitized = sanitizeMarkdown(text);
+          res.write(`data: ${JSON.stringify({ type: "chunk", content: sanitized })}\n\n`);
+        }
+      }
+
+      // Save the complete AI response
       const assistantMessage = await storage.createChatMessage({
         userId,
         materialId: materialId || null,
         role: "assistant",
-        content: aiResponse,
+        content: sanitizeMarkdown(fullResponse),
       });
 
-      res.json({ userMessage, assistantMessage });
+      // Send completion event with full message
+      res.write(`data: ${JSON.stringify({ type: "complete", message: assistantMessage })}\n\n`);
+      res.end();
     } catch (error: any) {
       console.error("Error processing chat message:", error);
-      res.status(500).json({ message: error.message || "Failed to process chat message" });
+      res.write(`data: ${JSON.stringify({ type: "error", message: error.message || "Failed to process chat message" })}\n\n`);
+      res.end();
     }
   });
 
