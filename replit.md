@@ -1,8 +1,8 @@
-# All Out - AI-Powered Study Platform
+# Ascend - AI-Powered Study Platform
 
 ## Overview
 
-All Out is an AI-powered study platform designed to transform students' study materials (e.g., PDFs) into interactive learning content. Key features include AI-generated flashcards, quizzes, mind maps, summaries, and audio/video explanations. The platform also incorporates gamification elements like leaderboards and streak tracking, alongside productivity tools such as a Pomodoro timer, to-do lists, and a concentration mode. A core ambition is to foster collaborative learning through real-time shared study sessions.
+Ascend is an AI-powered study platform designed to transform students' study materials (e.g., PDFs) into interactive learning content. Key features include AI-generated flashcards, quizzes, mind maps, summaries, and audio/video explanations. The platform also incorporates gamification elements like leaderboards and streak tracking, alongside productivity tools such as a Pomodoro timer, to-do lists, and a concentration mode. A core ambition is to foster collaborative learning through real-time shared study sessions.
 
 ## User Preferences
 

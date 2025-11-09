@@ -1,4 +1,4 @@
-# Design Guidelines: All Out - AI-Powered Study Platform
+# Design Guidelines: Ascend - AI-Powered Study Platform
 
 ## Design Approach
 **Reference-Based Approach**: Drawing from Notion (clean document interface), Duolingo (gamification elements), and Khan Academy (learning dashboard). This experience-focused application requires visual appeal to drive engagement while maintaining functional clarity for productivity tools.

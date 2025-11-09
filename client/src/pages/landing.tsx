@@ -10,7 +10,7 @@ export default function Landing() {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <BookOpen className="h-8 w-8 text-primary" data-testid="logo-icon" />
-            <span className="text-2xl font-heading font-bold" data-testid="logo-text">All Out</span>
+            <span className="text-2xl font-heading font-bold" data-testid="logo-text">Ascend</span>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -26,7 +26,7 @@ export default function Landing() {
         <div className="container mx-auto px-4 relative">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="font-heading font-bold text-4xl md:text-6xl mb-6 bg-gradient-to-r from-primary via-secondary to-gamification bg-clip-text text-transparent" data-testid="text-hero-title">
-              All Out
+              Ascend
             </h1>
             <p className="text-xl md:text-2xl text-muted-foreground mb-8" data-testid="text-hero-subtitle">
               Transform your PDFs into flashcards, quizzes, mind maps, and summaries with cutting-edge AI. Track your progress, compete on leaderboards, and master your studies.
