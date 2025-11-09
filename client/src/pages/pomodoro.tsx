@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Play, Pause, RotateCcw, Settings, Clock } from "lucide-react";
+import { Play, Pause, RotateCcw, Settings, Clock, Timer, TrendingUp } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { motion, AnimatePresence } from "framer-motion";
 
 type PomodoroSession = {
   id: string;
@@ -26,6 +27,84 @@ type PomodoroSession = {
 };
 
 type TimerState = "idle" | "work" | "break";
+
+// Circular Progress Component
+function CircularProgress({ 
+  progress, 
+  size = 280, 
+  strokeWidth = 12,
+  state 
+}: { 
+  progress: number; 
+  size?: number; 
+  strokeWidth?: number;
+  state: TimerState;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (progress / 100) * circumference;
+
+  const getStateColors = () => {
+    switch (state) {
+      case "work":
+        return {
+          bg: "stroke-primary/10",
+          fg: "stroke-primary",
+          gradient: "from-primary/20 to-primary/5"
+        };
+      case "break":
+        return {
+          bg: "stroke-green-500/10",
+          fg: "stroke-green-500",
+          gradient: "from-green-500/20 to-green-500/5"
+        };
+      default:
+        return {
+          bg: "stroke-muted",
+          fg: "stroke-primary/50",
+          gradient: "from-primary/10 to-primary/5"
+        };
+    }
+  };
+
+  const colors = getStateColors();
+
+  return (
+    <div className="relative inline-flex items-center justify-center">
+      <svg
+        width={size}
+        height={size}
+        className="transform -rotate-90"
+      >
+        {/* Background circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          className={colors.bg}
+          strokeWidth={strokeWidth}
+        />
+        {/* Progress circle */}
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          className={colors.fg}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 0.5, ease: "easeInOut" }}
+        />
+      </svg>
+      <div className={`absolute inset-0 flex items-center justify-center rounded-full bg-gradient-to-br ${colors.gradient} m-4`} />
+    </div>
+  );
+}
 
 export default function Pomodoro() {
   const { user, isAuthenticated } = useAuth();
@@ -184,64 +263,137 @@ export default function Pomodoro() {
     return null;
   }
 
+  const getTotalDuration = () => {
+    return timerState === "work" ? workDuration * 60 : timerState === "break" ? breakDuration * 60 : workDuration * 60;
+  };
+
+  const progress = ((getTotalDuration() - timeLeft) / getTotalDuration()) * 100;
+
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-8 flex items-center gap-3">
-        <Clock className="h-8 w-8 text-primary" />
-        <div className="flex-1">
-          <h1 className="text-4xl font-heading font-bold mb-2" data-testid="text-page-title">
-            Pomodoro Timer
-          </h1>
-          <p className="text-muted-foreground" data-testid="text-page-description">
-            Stay focused with the Pomodoro Technique. Work in focused intervals with regular breaks.
-          </p>
+    <div className="container mx-auto px-4 py-6 md:py-8 max-w-6xl">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mb-6 md:mb-8"
+      >
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 backdrop-blur-sm">
+            <Timer className="h-6 w-6 md:h-7 md:w-7 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-heading font-bold" data-testid="text-page-title">
+              Pomodoro Timer
+            </h1>
+            <p className="text-muted-foreground text-sm md:text-base" data-testid="text-page-description">
+              Stay focused with the Pomodoro Technique
+            </p>
+          </div>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
-          <Card className="p-8">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted mb-4">
-                <Clock className="h-4 w-4" />
-                <span className="text-sm font-medium" data-testid="text-timer-state">
-                  {timerState === "idle" && "Ready to Start"}
-                  {timerState === "work" && "Focus Time"}
-                  {timerState === "break" && "Break Time"}
-                </span>
-              </div>
+      <div className="grid lg:grid-cols-3 gap-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="lg:col-span-2"
+        >
+          <Card className="p-6 md:p-8 border-2">
+            <div className="text-center">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={timerState}
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-br border mb-6 ${
+                    timerState === "work" 
+                      ? "from-primary/10 to-primary/5 border-primary/20" 
+                      : timerState === "break" 
+                      ? "from-green-500/10 to-green-500/5 border-green-500/20" 
+                      : "from-muted/50 to-muted/30 border-muted"
+                  }`}
+                >
+                  <Clock className={`h-4 w-4 ${
+                    timerState === "work" 
+                      ? "text-primary" 
+                      : timerState === "break" 
+                      ? "text-green-500" 
+                      : "text-muted-foreground"
+                  }`} />
+                  <span className="text-sm font-semibold" data-testid="text-timer-state">
+                    {timerState === "idle" && "⏳ Ready to Start"}
+                    {timerState === "work" && "🎯 Focus Time"}
+                    {timerState === "break" && "☕ Break Time"}
+                  </span>
+                </motion.div>
+              </AnimatePresence>
               
-              <div className="text-8xl font-bold font-mono mb-8" data-testid="text-timer-display">
-                {formatTime(timeLeft)}
+              <div className="relative flex justify-center mb-8">
+                <CircularProgress progress={progress} size={280} strokeWidth={12} state={timerState} />
+                <motion.div
+                  key={timeLeft}
+                  initial={{ scale: 0.95 }}
+                  animate={{ scale: 1 }}
+                  className="absolute inset-0 flex flex-col items-center justify-center"
+                >
+                  <div className="text-6xl md:text-7xl font-bold font-mono" data-testid="text-timer-display">
+                    {formatTime(timeLeft)}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-2">
+                    {timerState === "work" ? "minutes of focus" : timerState === "break" ? "minutes of rest" : "ready when you are"}
+                  </div>
+                </motion.div>
               </div>
 
-              <div className="flex justify-center gap-4">
-                {!isRunning ? (
-                  <Button
-                    size="lg"
-                    onClick={handleStart}
-                    data-testid="button-start"
-                  >
-                    <Play className="h-5 w-5 mr-2" />
-                    Start
-                  </Button>
-                ) : (
-                  <Button
-                    size="lg"
-                    onClick={handlePause}
-                    variant="secondary"
-                    data-testid="button-pause"
-                  >
-                    <Pause className="h-5 w-5 mr-2" />
-                    Pause
-                  </Button>
-                )}
+              <div className="flex flex-wrap justify-center gap-3 mb-6">
+                <AnimatePresence mode="wait">
+                  {!isRunning ? (
+                    <motion.div
+                      key="start"
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.9, opacity: 0 }}
+                    >
+                      <Button
+                        size="lg"
+                        onClick={handleStart}
+                        data-testid="button-start"
+                        className="shadow-lg min-w-[140px]"
+                      >
+                        <Play className="h-5 w-5 mr-2" />
+                        Start
+                      </Button>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="pause"
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.9, opacity: 0 }}
+                    >
+                      <Button
+                        size="lg"
+                        onClick={handlePause}
+                        variant="secondary"
+                        data-testid="button-pause"
+                        className="shadow-lg min-w-[140px]"
+                      >
+                        <Pause className="h-5 w-5 mr-2" />
+                        Pause
+                      </Button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 
                 <Button
                   size="lg"
                   onClick={handleReset}
                   variant="outline"
                   data-testid="button-reset"
+                  className="shadow-sm"
                 >
                   <RotateCcw className="h-5 w-5 mr-2" />
                   Reset
@@ -257,7 +409,7 @@ export default function Pomodoro() {
                       <Settings className="h-5 w-5" />
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle>Timer Settings</DialogTitle>
                     </DialogHeader>
@@ -271,6 +423,7 @@ export default function Pomodoro() {
                           max="60"
                           defaultValue={workDuration}
                           data-testid="input-work-duration"
+                          className="border-2"
                         />
                       </div>
                       <div className="space-y-2">
@@ -282,6 +435,7 @@ export default function Pomodoro() {
                           max="30"
                           defaultValue={breakDuration}
                           data-testid="input-break-duration"
+                          className="border-2"
                         />
                       </div>
                       <Button
@@ -293,7 +447,7 @@ export default function Pomodoro() {
                             parseInt(breakInput.value)
                           );
                         }}
-                        className="w-full"
+                        className="w-full shadow-sm"
                         data-testid="button-save-settings"
                       >
                         Save Settings
@@ -302,48 +456,84 @@ export default function Pomodoro() {
                   </DialogContent>
                 </Dialog>
               </div>
-            </div>
 
-            <div className="border-t pt-6">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">Completed Cycles Today</span>
-                <span className="font-bold text-2xl" data-testid="text-completed-cycles">
-                  {completedCycles}
-                </span>
+              <div className="border-t pt-6">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Completed Cycles Today</span>
+                  <motion.span
+                    key={completedCycles}
+                    initial={{ scale: 1.2 }}
+                    animate={{ scale: 1 }}
+                    className="font-bold text-3xl text-primary"
+                    data-testid="text-completed-cycles"
+                  >
+                    {completedCycles}
+                  </motion.span>
+                </div>
               </div>
             </div>
           </Card>
-        </div>
+        </motion.div>
 
-        <div className="space-y-6">
-          <Card className="p-6">
-            <h3 className="font-semibold mb-4">Session Stats</h3>
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm text-muted-foreground mb-1">Total Study Time</div>
-                <div className="text-2xl font-bold" data-testid="text-total-study-time">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="space-y-6"
+        >
+          <Card className="p-6 border-2">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
+                <TrendingUp className="h-4 w-4 text-primary" />
+              </div>
+              <h3 className="font-semibold">Session Stats</h3>
+            </div>
+            <div className="space-y-5">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
+                <div className="text-xs text-muted-foreground mb-2">Total Study Time</div>
+                <div className="text-2xl md:text-3xl font-bold text-primary" data-testid="text-total-study-time">
                   {Math.floor(totalStudyTime / 60)}h {totalStudyTime % 60}m
                 </div>
               </div>
-              <div>
-                <div className="text-sm text-muted-foreground mb-1">Total Sessions</div>
-                <div className="text-2xl font-bold" data-testid="text-total-sessions">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
+                <div className="text-xs text-muted-foreground mb-2">Total Sessions</div>
+                <div className="text-2xl md:text-3xl font-bold text-primary" data-testid="text-total-sessions">
                   {sessions?.length || 0}
                 </div>
               </div>
             </div>
           </Card>
 
-          <Card className="p-6">
-            <h3 className="font-semibold mb-3">How it Works</h3>
-            <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-              <li>Set your work and break durations</li>
-              <li>Focus during work intervals</li>
-              <li>Take breaks between cycles</li>
-              <li>Track your productivity over time</li>
+          <Card className="p-6 border-2">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
+                <Clock className="h-4 w-4 text-primary" />
+              </div>
+              <h3 className="font-semibold">How it Works</h3>
+            </div>
+            <ol className="text-sm text-muted-foreground space-y-3">
+              {[
+                "Set your work and break durations",
+                "Focus during work intervals",
+                "Take breaks between cycles",
+                "Track your productivity over time"
+              ].map((step, index) => (
+                <motion.li
+                  key={index}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 + index * 0.1 }}
+                  className="flex items-start gap-3"
+                >
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-xs font-semibold text-primary mt-0.5">
+                    {index + 1}
+                  </div>
+                  <span className="leading-relaxed">{step}</span>
+                </motion.li>
+              ))}
             </ol>
           </Card>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
