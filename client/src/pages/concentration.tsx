@@ -5,7 +5,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Play, Pause, Square, Focus, AlertTriangle, Clock, Coffee } from "lucide-react";
+import { Play, Pause, Square, Focus, AlertTriangle, Clock, Coffee, Target, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -17,6 +17,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { motion, AnimatePresence } from "framer-motion";
 
 type StudySession = {
   id: string;
@@ -39,6 +40,54 @@ const PAUSE_REASONS = [
   "Stretching/rest",
   "Technical issue",
 ];
+
+function FocusCircle({ percentage, size = 200 }: { percentage: number; size?: number }) {
+  const radius = (size - 20) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (percentage / 100) * circumference;
+  const gradientId = `focusGradient-${Math.random().toString(36).substr(2, 9)}`;
+
+  return (
+    <svg width={size} height={size} className="transform -rotate-90">
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.05" />
+          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.10" />
+        </linearGradient>
+      </defs>
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke="currentColor"
+        strokeWidth="10"
+        fill="none"
+        className="text-muted opacity-20"
+      />
+      <motion.circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke="currentColor"
+        strokeWidth="10"
+        fill="none"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        className={percentage >= 70 ? "text-green-500" : percentage >= 40 ? "text-primary" : "text-destructive"}
+        initial={{ strokeDashoffset: circumference }}
+        animate={{ strokeDashoffset: offset }}
+        transition={{ duration: 0.5, ease: "easeInOut" }}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius - 15}
+        fill={`url(#${gradientId})`}
+      />
+    </svg>
+  );
+}
 
 export default function Concentration() {
   const { user, isAuthenticated } = useAuth();
@@ -409,181 +458,306 @@ export default function Concentration() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-4xl font-heading font-bold mb-2" data-testid="text-page-title">
-          Concentration Mode
-        </h1>
-        <p className="text-muted-foreground" data-testid="text-page-description">
-          Track your focus with tab-switch detection and regular beep reminders every 5 minutes.
-        </p>
-      </div>
+    <div className="container mx-auto px-4 py-6 md:py-8 max-w-6xl">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mb-6 md:mb-8"
+      >
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 backdrop-blur-sm">
+            <Target className="h-6 w-6 md:h-7 md:w-7 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-heading font-bold" data-testid="text-page-title">
+              Concentration Mode
+            </h1>
+            <p className="text-muted-foreground text-sm md:text-base" data-testid="text-page-description">
+              Track your focus with tab-switch detection
+            </p>
+          </div>
+        </div>
+      </motion.div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
-          <Card className="p-8">
-            <div className="text-center mb-8">
-              {isPaused ? (
-                <Badge variant="secondary" className="mb-4">
-                  <Coffee className="h-4 w-4 mr-2" />
-                  On Break
-                </Badge>
-              ) : isActive ? (
-                <Badge variant="default" className="mb-4">
-                  <Focus className="h-4 w-4 mr-2" />
-                  Concentrating
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="mb-4">
-                  <Clock className="h-4 w-4 mr-2" />
-                  Not Started
-                </Badge>
-              )}
+      <div className="grid lg:grid-cols-3 gap-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="lg:col-span-2"
+        >
+          <Card className="p-6 md:p-8 border-2">
+            <div className="text-center">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={isPaused ? "paused" : isActive ? "active" : "idle"}
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="inline-flex mb-6"
+                >
+                  {isPaused ? (
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-br from-muted/50 to-muted/30 border border-muted">
+                      <Coffee className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-semibold">☕ On Break</span>
+                    </div>
+                  ) : isActive ? (
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+                      <Focus className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold">🎯 Concentrating</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-br from-muted/50 to-muted/30 border border-muted">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-semibold">⏳ Not Started</span>
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
               
-              <div className="text-8xl font-bold font-mono mb-2" data-testid="text-timer-display">
-                {formatTime(elapsedTime)}
-              </div>
-              
-              <div className="text-sm text-muted-foreground mb-8">
-                Focus Score: {focusPercentage}%
+              <div className="relative flex justify-center mb-8">
+                <FocusCircle percentage={focusPercentage} size={240} />
+                <motion.div
+                  key={elapsedTime}
+                  initial={{ scale: 0.95 }}
+                  animate={{ scale: 1 }}
+                  className="absolute inset-0 flex flex-col items-center justify-center"
+                >
+                  <div className="text-5xl md:text-6xl font-bold font-mono mb-2" data-testid="text-timer-display">
+                    {formatTime(elapsedTime)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Focus Score: <span className={`font-bold ${focusPercentage >= 70 ? "text-green-500" : focusPercentage >= 40 ? "text-primary" : "text-destructive"}`}>{focusPercentage}%</span>
+                  </div>
+                </motion.div>
               </div>
 
-              <div className="flex justify-center gap-4">
-                {!isActive ? (
-                  <Button
-                    size="lg"
-                    onClick={handleStart}
-                    data-testid="button-start-session"
-                  >
-                    <Play className="h-5 w-5 mr-2" />
-                    Start Concentrating
-                  </Button>
-                ) : (
-                  <>
-                    {!isPaused ? (
+              <div className="flex flex-wrap justify-center gap-3 mb-6">
+                <AnimatePresence mode="wait">
+                  {!isActive ? (
+                    <motion.div
+                      key="start"
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.9, opacity: 0 }}
+                    >
                       <Button
                         size="lg"
-                        onClick={handlePause}
-                        variant="secondary"
-                        data-testid="button-pause-session"
-                      >
-                        <Pause className="h-5 w-5 mr-2" />
-                        Pause
-                      </Button>
-                    ) : (
-                      <Button
-                        size="lg"
-                        onClick={handleResume}
-                        data-testid="button-resume-session"
+                        onClick={handleStart}
+                        data-testid="button-start-session"
+                        className="shadow-lg min-w-[180px]"
                       >
                         <Play className="h-5 w-5 mr-2" />
-                        Resume
+                        Start Concentrating
                       </Button>
-                    )}
-                    <Button
-                      size="lg"
-                      onClick={handleStop}
-                      variant="destructive"
-                      data-testid="button-stop-session"
-                    >
-                      <Square className="h-5 w-5 mr-2" />
-                      Stop
-                    </Button>
-                  </>
-                )}
+                    </motion.div>
+                  ) : (
+                    <>
+                      {!isPaused ? (
+                        <motion.div
+                          key="pause"
+                          initial={{ scale: 0.9, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.9, opacity: 0 }}
+                        >
+                          <Button
+                            size="lg"
+                            onClick={handlePause}
+                            variant="secondary"
+                            data-testid="button-pause-session"
+                            className="shadow-lg min-w-[140px]"
+                          >
+                            <Pause className="h-5 w-5 mr-2" />
+                            Pause
+                          </Button>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="resume"
+                          initial={{ scale: 0.9, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.9, opacity: 0 }}
+                        >
+                          <Button
+                            size="lg"
+                            onClick={handleResume}
+                            data-testid="button-resume-session"
+                            className="shadow-lg min-w-[140px]"
+                          >
+                            <Play className="h-5 w-5 mr-2" />
+                            Resume
+                          </Button>
+                        </motion.div>
+                      )}
+                      <Button
+                        size="lg"
+                        onClick={handleStop}
+                        variant="destructive"
+                        data-testid="button-stop-session"
+                        className="shadow-lg"
+                      >
+                        <Square className="h-5 w-5 mr-2" />
+                        Stop
+                      </Button>
+                    </>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 border-t pt-6">
-              <div className="text-center p-4 bg-muted rounded-md">
-                <div className="text-2xl font-bold mb-1" data-testid="text-tab-switches">
+            <div className="grid grid-cols-2 gap-3 md:gap-4 border-t pt-6">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-center p-4 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20"
+              >
+                <div className="text-xl md:text-2xl font-bold mb-1 text-primary" data-testid="text-tab-switches">
                   {tabSwitches}
                 </div>
-                <div className="text-sm text-muted-foreground">Tab Switches</div>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-md">
-                <div className="text-2xl font-bold mb-1" data-testid="text-time-wasted">
+                <div className="text-xs md:text-sm text-muted-foreground">Tab Switches</div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-center p-4 rounded-xl bg-gradient-to-br from-destructive/5 to-destructive/10 border border-destructive/20"
+              >
+                <div className="text-xl md:text-2xl font-bold mb-1 text-destructive" data-testid="text-time-wasted">
                   {Math.floor(timeWasted / 60)}m {timeWasted % 60}s
                 </div>
-                <div className="text-sm text-muted-foreground">Time Wasted</div>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-md">
-                <div className="text-2xl font-bold mb-1" data-testid="text-pause-count">
+                <div className="text-xs md:text-sm text-muted-foreground">Time Wasted</div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-center p-4 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20"
+              >
+                <div className="text-xl md:text-2xl font-bold mb-1 text-primary" data-testid="text-pause-count">
                   {pauseCount}
                 </div>
-                <div className="text-sm text-muted-foreground">Breaks Taken</div>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-md">
-                <div className="text-2xl font-bold mb-1" data-testid="text-pause-duration">
+                <div className="text-xs md:text-sm text-muted-foreground">Breaks Taken</div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="text-center p-4 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20"
+              >
+                <div className="text-xl md:text-2xl font-bold mb-1 text-primary" data-testid="text-pause-duration">
                   {Math.floor(pauseDuration / 60)}m {pauseDuration % 60}s
                 </div>
-                <div className="text-sm text-muted-foreground">Break Time</div>
-              </div>
+                <div className="text-xs md:text-sm text-muted-foreground">Break Time</div>
+              </motion.div>
             </div>
 
             {pauseReasons.length > 0 && (
-              <div className="mt-6 border-t pt-6">
-                <h3 className="font-semibold mb-3">Break History</h3>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="mt-6 border-t pt-6"
+              >
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Coffee className="h-4 w-4 text-primary" />
+                  Break History
+                </h3>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {pauseReasons.map((pause, index) => (
-                    <div key={index} className="flex justify-between items-center text-sm p-2 bg-muted rounded">
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex justify-between items-center text-sm p-3 rounded-lg bg-gradient-to-br from-muted/50 to-muted/30 border border-muted"
+                    >
                       <span className="text-muted-foreground">{pause.reason}</span>
-                      <span className="font-medium">
+                      <span className="font-medium text-primary">
                         {Math.floor(pause.duration / 60)}m {pause.duration % 60}s
                       </span>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             )}
           </Card>
-        </div>
+        </motion.div>
 
-        <div className="space-y-6">
-          <Card className="p-6">
-            <h3 className="font-semibold mb-4">Your Stats</h3>
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm text-muted-foreground mb-1">Total Focus Time</div>
-                <div className="text-2xl font-bold" data-testid="text-total-focus-time">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="space-y-6"
+        >
+          <Card className="p-6 border-2">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
+                <TrendingUp className="h-4 w-4 text-primary" />
+              </div>
+              <h3 className="font-semibold">Your Stats</h3>
+            </div>
+            <div className="space-y-5">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
+                <div className="text-xs text-muted-foreground mb-2">Total Focus Time</div>
+                <div className="text-2xl md:text-3xl font-bold text-primary" data-testid="text-total-focus-time">
                   {Math.floor(totalFocusTime / 60)}h {totalFocusTime % 60}m
                 </div>
               </div>
-              <div>
-                <div className="text-sm text-muted-foreground mb-1">Total Sessions</div>
-                <div className="text-2xl font-bold" data-testid="text-total-sessions">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
+                <div className="text-xs text-muted-foreground mb-2">Total Sessions</div>
+                <div className="text-2xl md:text-3xl font-bold text-primary" data-testid="text-total-sessions">
                   {sessions?.filter((s) => s.isConcentrationMode).length || 0}
                 </div>
               </div>
-              <div>
-                <div className="text-sm text-muted-foreground mb-1">Total Interruptions</div>
-                <div className="text-2xl font-bold" data-testid="text-total-tab-switches">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-destructive/5 to-destructive/10 border border-destructive/20">
+                <div className="text-xs text-muted-foreground mb-2">Total Interruptions</div>
+                <div className="text-2xl md:text-3xl font-bold text-destructive" data-testid="text-total-tab-switches">
                   {totalTabSwitches}
                 </div>
               </div>
-              <div>
-                <div className="text-sm text-muted-foreground mb-1">Total Breaks</div>
-                <div className="text-2xl font-bold" data-testid="text-total-pauses">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
+                <div className="text-xs text-muted-foreground mb-2">Total Breaks</div>
+                <div className="text-2xl md:text-3xl font-bold text-primary" data-testid="text-total-pauses">
                   {totalPauses}
                 </div>
               </div>
             </div>
           </Card>
 
-          <Card className="p-6 bg-warning/10 border-warning">
-            <div className="flex gap-2 mb-3">
-              <AlertTriangle className="h-5 w-5 text-warning" />
+          <Card className="p-6 border-2">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
+                <AlertTriangle className="h-4 w-4 text-primary" />
+              </div>
               <h3 className="font-semibold">How It Works</h3>
             </div>
-            <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
-              <li>Beep alert every 5 minutes</li>
-              <li>Tab switches tracked when running</li>
-              <li>Pause anytime for breaks</li>
-              <li>Track all break reasons</li>
-              <li>Build streaks with 30+ min focus</li>
-            </ul>
+            <ol className="text-sm text-muted-foreground space-y-3">
+              {[
+                "Beep alert every 5 minutes",
+                "Tab switches tracked when running",
+                "Pause anytime for breaks",
+                "Track all break reasons",
+                "Build streaks with 30+ min focus"
+              ].map((step, index) => (
+                <motion.li
+                  key={index}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 + index * 0.1 }}
+                  className="flex items-start gap-3"
+                >
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-xs font-semibold text-primary mt-0.5">
+                    {index + 1}
+                  </div>
+                  <span className="leading-relaxed">{step}</span>
+                </motion.li>
+              ))}
+            </ol>
           </Card>
-        </div>
+        </motion.div>
       </div>
 
       <Dialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>

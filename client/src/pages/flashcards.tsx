@@ -398,30 +398,37 @@ export default function Flashcards() {
               </div>
             </motion.div>
             
-            <div className="perspective-1000 mb-8" style={{ perspective: "1000px" }}>
+            <div className="perspective-1000 mb-8" style={{ perspective: "1200px" }}>
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={`${currentCard?.id}-${isFlipped}`}
-                  initial={{ rotateY: isFlipped ? -180 : 0, opacity: 0 }}
-                  animate={{ rotateY: 0, opacity: 1 }}
-                  exit={{ rotateY: isFlipped ? 180 : -180, opacity: 0 }}
-                  transition={{ duration: 0.6, ease: [0.43, 0.13, 0.23, 0.96] }}
+                  initial={{ rotateY: isFlipped ? -180 : 0, opacity: 0, scale: 0.9 }}
+                  animate={{ rotateY: 0, opacity: 1, scale: 1 }}
+                  exit={{ rotateY: isFlipped ? 180 : -180, opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.7, ease: [0.43, 0.13, 0.23, 0.96] }}
                   style={{ transformStyle: "preserve-3d" }}
                   onClick={handleFlip}
                   className="cursor-pointer"
                   data-testid={`card-flashcard-${currentCard?.id}`}
                 >
-                  <Card className="p-8 md:p-12 min-h-[24rem] md:min-h-[28rem] flex items-center justify-center border-2 shadow-lg hover-elevate">
-                    <div className="text-center max-w-2xl">
+                  <Card className="relative p-8 md:p-12 min-h-[24rem] md:min-h-[30rem] flex items-center justify-center border-2 shadow-2xl hover-elevate bg-gradient-to-br from-card via-card to-primary/5 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-primary/5 opacity-50"></div>
+                    <div className="text-center max-w-2xl relative z-10">
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
                       >
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 mb-6">
-                          <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
-                          <span className="text-xs font-medium uppercase tracking-wide">
-                            {isFlipped ? "Answer" : "Question"}
+                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-br border mb-6 ${
+                          isFlipped 
+                            ? "from-green-500/10 to-green-500/5 border-green-500/20" 
+                            : "from-primary/10 to-primary/5 border-primary/20"
+                        }`}>
+                          <div className={`h-2 w-2 rounded-full animate-pulse ${
+                            isFlipped ? "bg-green-500" : "bg-primary"
+                          }`}></div>
+                          <span className="text-xs font-bold uppercase tracking-wide">
+                            {isFlipped ? "✓ Answer" : "? Question"}
                           </span>
                         </div>
                       </motion.div>
@@ -430,7 +437,7 @@ export default function Flashcards() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="font-heading font-semibold text-xl md:text-3xl leading-relaxed mb-6"
+                        className="font-heading font-bold text-xl md:text-3xl lg:text-4xl leading-relaxed mb-6 bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text"
                       >
                         {isFlipped ? currentCard?.answer : currentCard?.question}
                       </motion.h2>
@@ -441,9 +448,19 @@ export default function Flashcards() {
                         transition={{ delay: 0.4 }}
                         className="text-sm text-muted-foreground flex items-center gap-2 justify-center"
                       >
-                        <RotateCw className="h-3 w-3" />
+                        <RotateCw className="h-4 w-4 animate-spin-slow" style={{ animationDuration: "3s" }} />
                         Click to flip
                       </motion.p>
+                    </div>
+                    
+                    <div className="absolute top-4 right-4">
+                      <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        currentCard?.isAIGenerated 
+                          ? "bg-gradient-to-br from-primary/20 to-primary/10 text-primary border border-primary/20" 
+                          : "bg-muted text-muted-foreground"
+                      }`}>
+                        {currentCard?.isAIGenerated ? "🤖 AI Generated" : "📝 Manual"}
+                      </div>
                     </div>
                   </Card>
                 </motion.div>
