@@ -1,6 +1,8 @@
-import { File } from "@google-cloud/storage";
+import { S3Object } from "./objectStorage";
+import { S3Client, HeadObjectCommand, PutObjectCommand, CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { objectStorageClient } from "./objectStorage";
 
-const ACL_POLICY_METADATA_KEY = "custom:aclPolicy";
+const ACL_POLICY_METADATA_KEY = "custom-acl-policy";
 
 export enum ObjectAccessGroupType {}
 
@@ -54,30 +56,87 @@ function createObjectAccessGroup(
 }
 
 export async function setObjectAclPolicy(
-  objectFile: File,
+  objectFile: S3Object,
   aclPolicy: ObjectAclPolicy,
 ): Promise<void> {
-  const [exists] = await objectFile.exists();
-  if (!exists) {
-    throw new Error(`Object not found: ${objectFile.name}`);
+  // Get current metadata
+  let currentMetadata: Record<string, string> = {};
+  try {
+    const metadata = await objectFile.getMetadata();
+    currentMetadata = metadata.metadata || {};
+  } catch (error) {
+    // Object might not exist, but we'll try to set metadata anyway
   }
 
-  await objectFile.setMetadata({
-    metadata: {
-      [ACL_POLICY_METADATA_KEY]: JSON.stringify(aclPolicy),
-    },
+  // Update metadata with ACL policy
+  currentMetadata[ACL_POLICY_METADATA_KEY] = JSON.stringify(aclPolicy);
+
+  // Get object metadata to preserve other properties
+  const headCommand = new HeadObjectCommand({
+    Bucket: objectFile.bucket,
+    Key: objectFile.key,
   });
+
+  let contentType: string | undefined;
+  let contentLength: number | undefined;
+  let existingMetadata: Record<string, string> = {};
+  let cacheControl: string | undefined;
+  let contentEncoding: string | undefined;
+  let contentDisposition: string | undefined;
+  let etag: string | undefined;
+
+  try {
+    const headResponse = await objectStorageClient.send(headCommand);
+    contentType = headResponse.ContentType;
+    contentLength = headResponse.ContentLength;
+    existingMetadata = headResponse.Metadata || {};
+    cacheControl = headResponse.CacheControl;
+    contentEncoding = headResponse.ContentEncoding;
+    contentDisposition = headResponse.ContentDisposition;
+    etag = headResponse.ETag;
+  } catch (error: any) {
+    if (error.name !== "NotFound" && error.$metadata?.httpStatusCode !== 404) {
+      throw error;
+    }
+    // Object doesn't exist, we can't set metadata
+    throw new Error(`Object not found: ${objectFile.bucket}/${objectFile.key}`);
+  }
+
+  // Merge existing metadata with new ACL policy
+  const updatedMetadata = {
+    ...existingMetadata,
+    ...currentMetadata,
+  };
+
+  // Copy object to itself with updated metadata (S3 doesn't support direct metadata updates)
+  const copyCommand = new CopyObjectCommand({
+    Bucket: objectFile.bucket,
+    Key: objectFile.key,
+    CopySource: `${objectFile.bucket}/${objectFile.key}`,
+    Metadata: updatedMetadata,
+    MetadataDirective: "REPLACE",
+    ContentType: contentType,
+    CacheControl: cacheControl,
+    ContentEncoding: contentEncoding,
+    ContentDisposition: contentDisposition,
+  });
+
+  await objectStorageClient.send(copyCommand);
 }
 
 export async function getObjectAclPolicy(
-  objectFile: File,
+  objectFile: S3Object,
 ): Promise<ObjectAclPolicy | null> {
-  const [metadata] = await objectFile.getMetadata();
-  const aclPolicy = metadata?.metadata?.[ACL_POLICY_METADATA_KEY];
-  if (!aclPolicy) {
+  try {
+    const metadata = await objectFile.getMetadata();
+    const aclPolicy = metadata.metadata?.[ACL_POLICY_METADATA_KEY];
+    if (!aclPolicy) {
+      return null;
+    }
+    return JSON.parse(aclPolicy as string);
+  } catch (error) {
     return null;
   }
-  return JSON.parse(aclPolicy as string);
 }
 
 export async function canAccessObject({
@@ -86,7 +145,7 @@ export async function canAccessObject({
   requestedPermission,
 }: {
   userId?: string;
-  objectFile: File;
+  objectFile: S3Object;
   requestedPermission: ObjectPermission;
 }): Promise<boolean> {
   const aclPolicy = await getObjectAclPolicy(objectFile);

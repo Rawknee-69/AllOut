@@ -104,36 +104,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Only PDF files are allowed" });
       }
 
-      const { ObjectStorageService, objectStorageClient } = await import("./objectStorage");
+      const { objectStorage } = await import("./objectStorage");
       const { setObjectAclPolicy } = await import("./objectAcl");
-      
-      const objectStorageService = new ObjectStorageService();
-      const privateDir = objectStorageService.getPrivateObjectDir();
       
       const sanitizedFilename = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
       const fileName = `pdfs/${userId}/${Date.now()}_${sanitizedFilename}`;
-      const fullPath = `${privateDir}/${fileName}`;
       
-      const pathParts = fullPath.split("/").filter(p => p);
-      const bucketName = pathParts[0];
-      const objectName = pathParts.slice(1).join("/");
+      // Upload file to object storage
+      await objectStorage.uploadFile(fileName, file.buffer, file.mimetype);
       
-      const bucket = objectStorageClient.bucket(bucketName);
-      const bucketFile = bucket.file(objectName);
-      
-      await bucketFile.save(file.buffer, {
-        contentType: file.mimetype,
-        metadata: {
-          contentType: file.mimetype,
-        },
-      });
-      
-      const [exists] = await bucketFile.exists();
-      if (!exists) {
-        throw new Error("File failed to upload to object storage");
-      }
-      
-      await setObjectAclPolicy(bucketFile, {
+      // Set ACL policy for the uploaded file
+      const objectFile = await objectStorage.getObjectEntityFile(`/objects/${fileName}`);
+      await setObjectAclPolicy(objectFile, {
         owner: userId,
         visibility: "private",
       });
