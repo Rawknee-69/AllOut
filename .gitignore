@@ -9,4 +9,4 @@ vite.config.ts.*
 *.local/
 .env
 .vercel
-api/index.js
+# api/index.js is generated during build but we keep a placeholder in git

@@ -17,6 +17,7 @@ async function buildVercel() {
   }
 
   // Bundle the API function with all server dependencies
+  // This creates api/index.js which Vercel will use
   await build({
     entryPoints: ['api/index.ts'],
     bundle: true,
