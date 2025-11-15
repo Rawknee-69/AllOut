@@ -1067,8 +1067,17 @@ Your goal is to ensure that even the most difficult concepts become easy to unde
 
   const httpServer = createServer(app);
   
-  // Setup WebSocket for collaboration
-  setupCollabWebSocket(httpServer);
+  // Setup WebSocket for collaboration (skip on Vercel/serverless)
+  // Vercel doesn't support WebSockets in serverless functions
+  if (process.env.VERCEL !== "1" && typeof process.env.VERCEL === "undefined") {
+    try {
+      setupCollabWebSocket(httpServer);
+    } catch (error) {
+      console.warn("WebSocket setup failed (this is expected on Vercel):", error);
+    }
+  } else {
+    console.log("WebSocket disabled: Running on Vercel (serverless functions don't support WebSockets)");
+  }
   
   return httpServer;
 }
